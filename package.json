@@ -1,0 +1,12 @@
+{
+  "name": "noneeds",
+  "version": "1.0.0",
+  "description": "A short app which can create a custom PWA.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
