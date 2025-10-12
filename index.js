@@ -5,13 +5,12 @@ var fs = require("fs");
 var path = require("path");
 const os = require('os');
 
-console.log("Home dir:", os.homedir());
 
 if (!fs.existsSync(path.join(os.homedir(), ".noneed"))) {
     console.log(chalk.gray("=> Initalizing the CLI"))
     fs.mkdirSync(path.join(os.homedir(), ".noneed"), {recursive: true});
     fs.mkdirSync(path.join(os.homedir(), '.noneed/pwa'), {recursive: true});
-    fs.writeFileSync(path.join(os.homedir(), '.noneed/logs.txt'));
+    fs.writeFileSync(path.join(os.homedir(), '.noneed/logs.txt', ""));
 }
 
 var f = require("./usefool.js");
