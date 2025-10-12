@@ -29,6 +29,10 @@ switch (entry[0]) {
         };
         infos["entry"] = "log";
         break;
+    case "list":
+        infos["entry"] = "list";
+        f.log(chalk.gray("=> Listing projects..."));
+        break;
     default:
         f.log(chalk.red.bold(`ERREUR: Unknowed command '${entry[0]}'`));
 }

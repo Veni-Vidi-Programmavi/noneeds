@@ -27,5 +27,9 @@ switch (infos.entry) {
             f.log(chalk.red.bold("ERREUR: Logs are NOT good RESETED \n.  Make sur you didn't remove any file of this CLI"));
         };
         break;
-    
+    case "list":
+        var l = fs.readdirSync("pwa/");
+        console.log(l)
+        
+        break;
 }
