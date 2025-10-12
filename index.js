@@ -11,6 +11,7 @@ if (!fs.existsSync(path.join(os.homedir(), ".noneed"))) {
     fs.mkdirSync(path.join(os.homedir(), ".noneed"), {recursive: true});
     fs.mkdirSync(path.join(os.homedir(), '.noneed/pwa'), {recursive: true});
     fs.writeFileSync(path.join(os.homedir(), '.noneed/logs.txt', ""));
+    fs.appendFileSync(path.join(os.homedir(), ".noneed/logs.txt"), chalk.gray("LOG =>    ")+"coucou"+"\n");
 }
 
 var f = require("./usefool.js");
