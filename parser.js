@@ -10,7 +10,7 @@ switch (entry[0]) {
     case "create":
         switch (entry[1]) {
             case "pwa":
-                f.log(chalk.gray("=> PWA choiced..."));
+                f.log(chalk.gray("=> Running the PWA guide..."));
                 //f.log(chalk.gray("=> Creating a new PWA..."));
                 infos["entry"] = "pwa";
                 break;
