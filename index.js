@@ -16,7 +16,9 @@ switch (infos.entry) {
         var logs = fs.readFileSync("logs.txt", "utf-8").split("\n");
         console.log(chalk.blue.bold("Affichage des logs :\n"));
         logs.forEach(element => {
-            console.log(element);
+            setTimeout(()=> {
+                console.log(element);
+            }, 200);
         });
         break;
     case "reset_log":
