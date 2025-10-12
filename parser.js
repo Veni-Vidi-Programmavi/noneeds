@@ -1,5 +1,6 @@
 var f = require("./usefool.js");
 var chalk = require("chalk");
+var fs = require("fs");
 
 var infos = {
     "entry": null
@@ -16,6 +17,9 @@ switch (entry[0]) {
             default:
                 f.log(chalk.red.bold("ERREUR: Not kind of app specified"));
         }
+        break;
+    case "log":
+        infos["entry"] = "log";
         break;
     default:
         f.log(chalk.red.bold("ERREUR: Unknowed command"));

@@ -1,0 +1,56 @@
+[90mLOG =>    [39m[31m[1mERREUR: Not kind of app specified[22m[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[31m[1mERREUR: Not kind of app specified[22m[39m
+[90mLOG =>    [39m[31m[1mERREUR: Not kind of app specified[22m[39m
+[90mLOG =>    [39m[31m[1mERREUR: Unknowed command[22m[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> Generating the manifest...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> Generating the manifest...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> Generating the manifest...[39m
+[90mLOG =>    [39m[47m[32mManifest updated[39m[49m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> Generating the manifest...[39m
+[90mLOG =>    [39m[32m[1mManifest updated[22m[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> Generating the manifest...[39m
+[90mLOG =>    [39m[32m[1m✅ Manifest updated[22m[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> Making a folder...[39m
+[90mLOG =>    [39m[90m=> Generating the manifest...[39m
+[90mLOG =>    [39m[32m[1m✅ Manifest updated[22m[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> Making a folder...[39m
+[90mLOG =>    [39m[90m=> Generating the manifest...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> Making a folder...[39m
+[90mLOG =>    [39m[90m=> Generating the manifest...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> Making a folder...[39m
+[90mLOG =>    [39m[90m=> Generating the manifest...[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> Making a folder...[39m
+[90mLOG =>    [39m[90m=> Generating the manifest...[39m
+[90mLOG =>    [39m[32m[1m✅ Manifest updated[22m[39m
+[90mLOG =>    [39m[90m=> PWA choiced...[39m
+[90mLOG =>    [39m[90m=> Making a folder...[39m
+[90mLOG =>    [39m[90m=> Generating the manifest...[39m
+[90mLOG =>    [39m[32m[1m✅ Manifest updated[22m[39m
