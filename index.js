@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 
+if (!fs.existsSync(path.join(os.homedir(), ".noneed"))) {
+    console.log(chalk.gray("=> Initalizing the CLI"))
+    fs.mkdirSync(path.join(os.homedir(), ".noneed"), {recursive: true});
+    fs.mkdirSync(path.join(os.homedir(), 'noneed/pwa'), {recursive: true});
+    fs.writeFileSync(path.join(os.homedir(), 'noneed/logs.txt'));
+}
+
 var f = require("./usefool.js");
 var infos = require("./parser.js");
 var pwa = require("./pwa/pwa.js");
@@ -9,13 +16,6 @@ const PWA = require("./pwa/pwa.js");
 var editor = require("./editor.js");
 const os = require('os');
 var path = require("path");
-
-if (!fs.existsSync(path.join(os.homedir(), ".noneed"))) {
-    console.log(chalk.gray("=> Initalizing the CLI"))
-    fs.mkdirSync(path.join(os.homedir(), ".noneed"), {recursive: true});
-    fs.mkdirSync(path.join(os.homedir(), 'noneed/pwa'), {recursive: true});
-    fs.writeFileSync(path.join(os.homedir(), 'noneed/logs.txt'));
-}
 
 switch (infos.entry) {
     case "pwa":
