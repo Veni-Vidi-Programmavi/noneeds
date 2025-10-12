@@ -1,6 +1,6 @@
 {
   "name": "noneeds",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A short app which can create a custom PWA.",
   "main": "index.js",
   "scripts": {
