@@ -2,6 +2,8 @@ var inquirer = require("inquirer");
 const f = require("../usefool");
 var chalk = require("chalk");
 var fs = require("fs");
+var path = require("path");
+var os = require("os");
 
 var questions = [
     {
