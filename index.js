@@ -12,7 +12,7 @@ if (!fs.existsSync(path.join(os.homedir(), ".noneed"))) {
     fs.mkdirSync(path.join(os.homedir(), '.noneed/pwa'), {recursive: true});
     fs.writeFileSync(path.join(os.homedir(), '.noneed/logs.txt'), "");
     var manifest = fs.readFileSync(__dirname+"/pwa/manifest.json", "utf-8");
-    fs.writeFileSync(path.join(os.homedir(), '.noneed/pwa/manifest.json', manifest));
+    fs.writeFileSync(path.join(os.homedir(), '.noneed/pwa/manifest.json'), manifest);
 }
 
 var f = require("./usefool.js");
