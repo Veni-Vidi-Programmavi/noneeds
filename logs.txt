@@ -18,3 +18,6 @@
 [90mLOG =>    [39m[31m[1mERREUR: Unknowed command 'undefined'[22m[39m
 [90mLOG =>    [39m[31m[1mERREUR: Unknowed command 'undefined'[22m[39m
 [90mLOG =>    [39m[90m=> Listing projects...[39m
+[90mLOG =>    [39m[31m[1mERREUR: Unknowed command 'undefined'[22m[39m
+[90mLOG =>    [39m[31m[1mERREUR: Unknowed command 'undefined'[22m[39m
+[90mLOG =>    [39m[31m[1mERREUR: Unknowed command 'undefined'[22m[39m
