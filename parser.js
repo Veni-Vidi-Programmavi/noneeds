@@ -19,6 +19,10 @@ switch (entry[0]) {
         }
         break;
     case "log":
+        if (entry[1] === "reset") {
+            infos["entry"] = "reset_log";
+            break;
+        };
         infos["entry"] = "log";
         break;
     default:
