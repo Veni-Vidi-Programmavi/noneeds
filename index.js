@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 
+var chalk = require("chalk");
+var fs = require("fs");
+var path = require("path");
+const os = require('os');
+
 if (!fs.existsSync(path.join(os.homedir(), ".noneed"))) {
     console.log(chalk.gray("=> Initalizing the CLI"))
     fs.mkdirSync(path.join(os.homedir(), ".noneed"), {recursive: true});
@@ -10,12 +15,8 @@ if (!fs.existsSync(path.join(os.homedir(), ".noneed"))) {
 var f = require("./usefool.js");
 var infos = require("./parser.js");
 var pwa = require("./pwa/pwa.js");
-var chalk = require("chalk");
-var fs = require("fs");
 const PWA = require("./pwa/pwa.js");
 var editor = require("./editor.js");
-const os = require('os');
-var path = require("path");
 
 switch (infos.entry) {
     case "pwa":
