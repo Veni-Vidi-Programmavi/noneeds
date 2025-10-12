@@ -33,6 +33,27 @@ switch (entry[0]) {
         infos["entry"] = "list";
         f.log(chalk.gray("=> Listing projects..."));
         break;
+    case "edit":
+        if (entry[1]) {
+            var l = fs.readdirSync("pwa/");
+            var pro = "";
+            for (let i of l) {
+                if (i.endsWith(".js") || i.endsWith(".json")) continue;
+                if (entry[1] === i) {
+                    pro = i;
+                };
+            };
+            if (pro === "") {
+                f.log(chalk.red.bold("ERREUR: No project specified"));
+                break;
+            }
+            f.log(chalk.gray("=> Running the editor..."));
+            infos["entry"] = "edit."+pro;
+        } else {
+            f.log(chalk.red.bold("ERREUR: No project specified"));
+            break;
+        }
+        break;
     default:
         f.log(chalk.red.bold(`ERREUR: Unknowed command '${entry[0]}'`));
 }

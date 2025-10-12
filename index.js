@@ -1,9 +1,12 @@
+#!/usr/bin/env node
+
 var f = require("./usefool.js");
 var infos = require("./parser.js");
 var pwa = require("./pwa/pwa.js");
 var chalk = require("chalk");
 var fs = require("fs");
 const PWA = require("./pwa/pwa.js");
+var editor = require("./editor.js");
 
 switch (infos.entry) {
     case "pwa":
@@ -36,4 +39,10 @@ switch (infos.entry) {
             console.log(" "+"Project :"+"  "+chalk.bgWhite.blue(" "+i+" "))
         }
         break;
+};
+if (infos.entry) {
+    if (infos.entry.includes("edit")) {
+        var a = infos.entry.split(".",2);
+
+    };
 }
