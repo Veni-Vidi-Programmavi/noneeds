@@ -33,7 +33,7 @@ class PWA {
     }
     mkdir(name) {
         f.log(chalk.gray("=> Making a folder..."));
-        fs.mkdirSync(`pwa/${name}`, {recursive: true});
+        fs.mkdirSync(path.join(os.homedir(), `pwa/${name}`), {recursive: true});
     }
     async askUser() {
         var a = await inquirer.prompt(questions);
@@ -46,15 +46,15 @@ class PWA {
     genManifest() {
         var fi;
         f.log(chalk.gray("=> Generating the manifest..."));
-        if (!fs.existsSync(`pwa/${this.name}/manifest.json`)) {
-            fi = JSON.parse(fs.readFileSync(`pwa/manifest.json`, "utf-8"));
+        if (!fs.existsSync(path.join(os.homedir(), `pwa/${this.name}/manifest.json`))) {
+            fi = JSON.parse(fs.readFileSync(path.join(os.homedir(), `pwa/manifest.json`), "utf-8"));
         } else {
-            fi = JSON.parse(fs.readFileSync(`pwa/${this.name}/manifest.json`, "utf-8"));
+            fi = JSON.parse(fs.readFileSync(path.join(os.homedir(), `pwa/${this.name}/manifest.json`), "utf-8"));
         };
         fi["name"] = this.name;
         fi["short_name"] = this.name;
         fi["theme_color"] = this.color;
-        fs.writeFileSync(`pwa/${this.name}/manifest.json`, JSON.stringify(fi, null, 2));
+        fs.writeFileSync(path.join(os.homedir(), `pwa/${this.name}/manifest.json`), JSON.stringify(fi, null, 2));
         f.log(chalk.green.bold("✅ Manifest updated"));
     }
 };
