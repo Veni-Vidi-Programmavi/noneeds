@@ -7,7 +7,7 @@
 
 ## ✨ Fonctionnalités principales
 
-- ✅ **Création instantanée de PWA** (manifest, service worker, assets, etc.)  
+- ✅ **Création instantanée de PWA** (manifest, service worker, etc.)  
 - ✅ **Compilation intelligente** depuis ton langage vers une structure web prête à déployer  
 - ✅ **Support offline natif** grâce au service worker et au cache  
 - ✅ **CLI intuitive** pour initialiser, compiler et servir en local  
@@ -21,7 +21,7 @@ Installe la CLI **NoNeed** globalement :
 
 ### ⚠️  Attention, la CLI n'a aucun intérêt pour l'instant car elle au début de son développemt
 ```bash
-npm install -g noneed
+sudo npm install -g noneed
 ```
 Après installation, la commande noneed est disponible dans ton terminal.
 
