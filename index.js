@@ -49,7 +49,7 @@ switch (infos.entry) {
     case "list":
         var l = fs.readdirSync(path.join(os.homedir(), ".noneed/pwa"));
         for (let i of l) {
-            if (i.endsWith(".js") || i.endsWith(".json")) continue;
+            if (i.endsWith(".js") || i.endsWith(".json") || i.startsWith(".")) continue;
             console.log(" "+"Project :"+"  "+chalk.bgWhite.blue(" "+i+" "))
         }
         break;
