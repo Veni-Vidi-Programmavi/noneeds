@@ -29,7 +29,9 @@ switch (infos.entry) {
         break;
     case "list":
         var l = fs.readdirSync("pwa/");
-        console.log(l)
-        
+        for (let i of l) {
+            if (i.endsWith(".js") || i.endsWith(".json")) continue;
+            console.log(" "+chalk.bgWhite("Project :")+chalk.blue(i))
+        }
         break;
 }
