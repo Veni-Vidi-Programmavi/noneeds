@@ -21,6 +21,7 @@ switch (entry[0]) {
     case "log":
         if (entry[1] === "reset") {
             infos["entry"] = "reset_log";
+            f.log(chalk.gray("=> Deleting logs..."));
             break;
         };
         infos["entry"] = "log";
