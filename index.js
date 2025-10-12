@@ -31,7 +31,7 @@ switch (infos.entry) {
         var l = fs.readdirSync("pwa/");
         for (let i of l) {
             if (i.endsWith(".js") || i.endsWith(".json")) continue;
-            console.log(" "+chalk.bgWhite("Project :")+"  "+chalk.blue(i))
+            console.log(" "+"Project :"+"  "+chalk.bgWhite.blue(i))
         }
         break;
 }
