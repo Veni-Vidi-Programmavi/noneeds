@@ -7,11 +7,12 @@ const os = require('os');
 
 
 if (!fs.existsSync(path.join(os.homedir(), ".noneed"))) {
-    console.log(chalk.gray("=> Initalizing the CLI"))
+    console.log(chalk.gray(chalk.gray("=> Initalizing the CLI")))
     fs.mkdirSync(path.join(os.homedir(), ".noneed"), {recursive: true});
     fs.mkdirSync(path.join(os.homedir(), '.noneed/pwa'), {recursive: true});
     fs.writeFileSync(path.join(os.homedir(), '.noneed/logs.txt', ""));
-    fs.appendFileSync(path.join(os.homedir(), ".noneed/logs.txt"), chalk.gray("LOG =>    ")+"coucou"+"\n");
+    var manifest = fs.readFileSync("./pwa/manifest.json", "utf-8");
+    fs.writeFileSync(path.join(os.homedir(), '.noneed/pwa/manifest.json', manifest));
 }
 
 var f = require("./usefool.js");
@@ -19,6 +20,8 @@ var infos = require("./parser.js");
 var pwa = require("./pwa/pwa.js");
 const PWA = require("./pwa/pwa.js");
 var editor = require("./editor.js");
+
+f.log("=> Opening the tool...");
 
 switch (infos.entry) {
     case "pwa":
