@@ -14,5 +14,8 @@
     "ink": "^6.3.1",
     "inquirer": "^8.2.7",
     "react": "^19.2.0"
+  },
+  "bin": {
+    "noneed": "./index.js"
   }
 }
