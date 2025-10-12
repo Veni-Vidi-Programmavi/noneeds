@@ -35,15 +35,15 @@ switch (infos.entry) {
         });
         break;
     case "reset_log":
-        fs.writeFileSync(path.join(os.homedir(), 'noneed/logs.txt'), "");
-        if (fs.readFileSync(path.join(os.homedir(), 'noneed/ogs.txt'), "utf-8") === "") {
+        fs.writeFileSync(path.join(os.homedir(), '.noneed/logs.txt'), "");
+        if (fs.readFileSync(path.join(os.homedir(), '.noneed/ogs.txt'), "utf-8") === "") {
             f.log(chalk.green.bold("✅ Logs are good reseted"));
         } else {
             f.log(chalk.red.bold("ERREUR: Logs are NOT good RESETED \n.  Make sur you didn't remove any file of this CLI"));
         };
         break;
     case "list":
-        var l = fs.readdirSync(path.join(os.homedir(), "noneed/pwa"));
+        var l = fs.readdirSync(path.join(os.homedir(), ".noneed/pwa"));
         for (let i of l) {
             if (i.endsWith(".js") || i.endsWith(".json")) continue;
             console.log(" "+"Project :"+"  "+chalk.bgWhite.blue(" "+i+" "))

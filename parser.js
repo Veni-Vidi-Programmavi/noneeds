@@ -35,7 +35,7 @@ switch (entry[0]) {
         break;
     case "edit":
         if (entry[1]) {
-            var l = fs.readdirSync(path.join(os.homedir(), "pwa/"));
+            var l = fs.readdirSync(path.join(os.homedir(), ".noneed/pwa/"));
             var pro = "";
             for (let i of l) {
                 if (i.endsWith(".js") || i.endsWith(".json")) continue;
