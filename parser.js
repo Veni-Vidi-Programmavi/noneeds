@@ -19,6 +19,9 @@ switch (entry[0]) {
         }
         break;
     case "log":
+        if (entry[1] !== "reset") {
+            f.log(chalk.red.bold(`ERREUR: '${entry[1]}' is not a valid argument`))
+        }
         if (entry[1] === "reset") {
             infos["entry"] = "reset_log";
             f.log(chalk.gray("=> Deleting logs..."));
@@ -27,7 +30,7 @@ switch (entry[0]) {
         infos["entry"] = "log";
         break;
     default:
-        f.log(chalk.red.bold("ERREUR: Unknowed command"));
+        f.log(chalk.red.bold(`ERREUR: Unknowed command '${entry[0]}'`));
 }
 
 module.exports = infos;
