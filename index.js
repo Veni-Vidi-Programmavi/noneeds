@@ -36,7 +36,7 @@ switch (infos.entry) {
         break;
     case "reset_log":
         fs.writeFileSync(path.join(os.homedir(), '.noneed/logs.txt'), "");
-        if (fs.readFileSync(path.join(os.homedir(), '.noneed/ogs.txt'), "utf-8") === "") {
+        if (fs.readFileSync(path.join(os.homedir(), '.noneed/logs.txt'), "utf-8") === "") {
             f.log(chalk.green.bold("✅ Logs are good reseted"));
         } else {
             f.log(chalk.red.bold("ERREUR: Logs are NOT good RESETED \n.  Make sur you didn't remove any file of this CLI"));
