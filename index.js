@@ -26,7 +26,7 @@ switch (infos.entry) {
         });
         break;
     case "log":
-        var logs = fs.readFileSync(path.join(os.homedir(), 'logs.txt'), "utf-8").split("\n");
+        var logs = fs.readFileSync(path.join(os.homedir(), '.noneed/logs.txt'), "utf-8").split("\n");
         console.log(chalk.blue.bold("Affichage des logs :\n"));
         logs.forEach(element => {
             setTimeout(()=> {
