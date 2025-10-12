@@ -54,6 +54,12 @@ switch (entry[0]) {
             break;
         }
         break;
+    case "version":
+        infos["entry"] = "version"
+        break;
+    case "-v":
+        infos["entry"] = "version"
+        break;
     default:
         f.log(chalk.red.bold(`ERREUR: Unknowed command '${entry[0]}'`));
 }

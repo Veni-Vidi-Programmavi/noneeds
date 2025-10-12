@@ -53,6 +53,11 @@ switch (infos.entry) {
             console.log(" "+"Project :"+"  "+chalk.bgWhite.blue(" "+i+" "))
         }
         break;
+    case "version":
+        f.log(chalk.gray("=> Recupering your current version..."));
+        var v = JSON.parse(fs.readFileSync(__dirname+"/package.json", "utf-8"));
+        f.log("Your version is "+chalk.blue.bold(v.version));
+        break;
 };
 if (infos.entry) {
     if (infos.entry.includes("edit")) {
