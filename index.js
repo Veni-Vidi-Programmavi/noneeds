@@ -45,26 +45,10 @@ switch (infos.entry) {
         };
         break;
     case "list":
-        const pwaPath = path.join(os.homedir(), ".noneed", "pwa");
-
-        console.log(chalk.gray("=> Listing projects..."));
-        console.log(chalk.gray("=> Path used:"), pwaPath);
-
-        // vérifie que le dossier existe bien
-        if (!fs.existsSync(pwaPath)) {
-            console.log(chalk.red.bold("❌ Le dossier ~/.noneed/pwa n'existe pas."));
-            console.log(chalk.yellow("➡️ Il sera créé automatiquement."));
-            fs.mkdirSync(pwaPath, { recursive: true });
-        }
-
-        const projects = fs.readdirSync(pwaPath);
-        if (projects.length === 0) {
-            console.log(chalk.gray("Aucun projet trouvé."));
-        } else {
-            for (const i of projects) {
-                if (i.endsWith(".js") || i.endsWith(".json")) continue;
-                console.log(" " + "Project :" + "  " + chalk.bgWhite.blue(" " + i + " "));
-            }
+        var l = fs.readdirSync(path.join(os.homedir(), ".noneed/pwa"));
+        for (let i of l) {
+            if (i.endsWith(".js") || i.endsWith(".json")) continue;
+            console.log(" "+"Project :"+"  "+chalk.bgWhite.blue(" "+i+" "))
         }
         break;
 };
