@@ -19,7 +19,7 @@ switch (entry[0]) {
         }
         break;
     case "log":
-        if (entry[1] !== "reset") {
+        if (entry[1] !== "reset" && entry[1]) {
             f.log(chalk.red.bold(`ERREUR: '${entry[1]}' is not a valid argument`))
         }
         if (entry[1] === "reset") {
