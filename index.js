@@ -33,7 +33,7 @@ switch (infos.entry) {
         };
         break;
     case "list":
-        var l = fs.readdirSync("pwa/");
+        var l = fs.readdirSync("./pwa/");
         for (let i of l) {
             if (i.endsWith(".js") || i.endsWith(".json")) continue;
             console.log(" "+"Project :"+"  "+chalk.bgWhite.blue(" "+i+" "))
