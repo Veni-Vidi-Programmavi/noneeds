@@ -1,6 +1,6 @@
 # 🌐 NoNeed — Crée ta PWA depuis ton propre langage de programmation
 
-> 🚀 **NoNeed** est un outil qui te permet de créer une **Progressive Web App (PWA)** à partir de ton **langage de programmation personnalisé**.  
+> 🚀 **NoNeed** est un outil qui te permet de créer une **Progressive Web App (PWA)** à partir d' **langage de programmation simple**.  
 > Grâce à sa **CLI ultra-simple**, tu peux **compiler**, **générer** et **tester** ta PWA depuis la racine de ton projet.
 
 ---
