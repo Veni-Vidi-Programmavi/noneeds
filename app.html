@@ -11,31 +11,70 @@
         [data-page] { display: none; }
         [data-page].active { display: block; }
         
-      body { background: #f5f5f5; font-family: Arial, sans-serif; }
-      [data-page] { padding: 20px; }
+      body { background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+      [data-page] { padding: 20px; display: flex; flex-direction: column; }
       button { padding: 10px 15px; cursor: pointer; background: #2196F3; color: white; border: none; border-radius: 4px; }
       button:hover { background: #1976D2; }
       input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
       h1, h2, h3 { margin: 10px 0; }
       p { margin: 8px 0; }
+      div, h1, h2, h3, p, button, input { box-sizing: border-box; }
     
     </style>
 </head>
 <body>
     <div id="app">
-        <div data-page="accueil" class="page active"><h1 id="el_0">Coucou</h1><script>
+        <div data-page="accueil" class="page active"><h1 id="el_0" style="background-color: red; color: white; display: flex; padding: 10px; border-radius: 10px; flex-direction: row; justify-content: center; align-items: center">Coucou</h1><script>
         (function() {
-          const el = document.getElementById('el_0');
-          
-            el.addEventListener('onClick', function() {
-              window.psl_vars.text = "bonjour";
-            });
-          
+          document.addEventListener('DOMContentLoaded', function() {
+            const el = document.getElementById('el_0');
+            if (el) window.psl_elements.super = el;
+          });
+        })();
+      </script>
+<button id="el_1">Cliquer</button><script>
+        (function() {
+          document.addEventListener('DOMContentLoaded', function() {
+            const el = document.getElementById('el_1');
+            if (!el) return;
+            
+            el.addEventListener('click', function() { 
+          if (window.psl_elements.super) {
+            const el = window.psl_elements.super;
+            const propValue = true;
+            if ('hide' === 'text') {
+              el.textContent = propValue;
+            } else if ('hide' === 'bg') {
+              el.style.backgroundColor = propValue;
+            } else if ('hide' === 'color') {
+              el.style.color = propValue;
+            } else if ('hide' === 'size') {
+              el.style.fontSize = propValue + 'px';
+            } else if ('hide' === 'hide') {
+              el.style.display = (propValue === true || propValue === 1 || propValue === '1') ? 'none' : 'block';
+            } else if ('hide' === 'show') {
+              el.style.display = (propValue === false || propValue === 0 || propValue === '0') ? 'none' : 'block';
+            } else if ('hide' === 'radius') {
+              el.style.borderRadius = propValue + 'px';
+            } else if ('hide' === 'border-size') {
+              el.style.borderWidth = propValue + 'px';
+            } else if ('hide' === 'border-color') {
+              el.style.borderColor = propValue;
+            } else if ('hide' === 'padding') {
+              el.style.padding = propValue + 'px';
+            } else if ('hide' === 'margin') {
+              el.style.margin = propValue + 'px';
+            } else {
+              el.setAttribute('data-' + 'hide', propValue);
+            }
+          }
+         });
+          });
         })();
       </script></div>
     </div>
     <script>
-        window.psl_vars = {};window.showPage = function(name) {
+        window.psl_vars = {}; window.psl_elements = {};window.showPage = function(name) {
       document.querySelectorAll('[data-page]').forEach(p => p.classList.remove('active'));
       const p = document.querySelector('[data-page="' + name + '"]');
       if (p) p.classList.add('active');

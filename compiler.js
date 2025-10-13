@@ -279,13 +279,19 @@ class PSLParser {
           this.expect('SYMBOL', '}');
           children.push({ type: 'if', condition, children: ifChildren });
         }
-        // Property assignment: key: value;
+        // Property assignment: key: value; OR just key; (for boolean flags)
         else if (token.type === 'IDENTIFIER' && nextToken.value === ':') {
           const key = this.expect('IDENTIFIER').value;
           this.expect('SYMBOL', ':');
           const value = this.parseExpression();
           props[key] = value;
           if (this.peek().value === ';') this.pos++;
+        }
+        // Boolean flag: just key; (without : or =)
+        else if (token.type === 'IDENTIFIER' && nextToken.value === ';') {
+          const key = this.expect('IDENTIFIER').value;
+          this.expect('SYMBOL', ';');
+          props[key] = { type: 'boolean', value: true };
         }
         // Nested element: name(...)
         else if (token.type === 'IDENTIFIER' && nextToken.value === '(') {
@@ -342,12 +348,53 @@ class PSLParser {
       this.skipWhitespace();
       if (this.peek().value === '}') break;
       
-      if (this.peek().type === 'IDENTIFIER' && this.peekAhead(1).value === ':') {
-        const key = this.expect('IDENTIFIER').value;
-        this.expect('SYMBOL', ':');
-        const value = this.parseExpression();
-        actions.push({ type: 'assignment', key, value });
-        if (this.peek().value === ';') this.pos++;
+      if (this.peek().type === 'IDENTIFIER') {
+        const name = this.peek().value;
+        const next = this.peekAhead(1);
+        
+        // Check for element.property: value or element.property;
+        if (next.value === '.' && this.peekAhead(2).type === 'IDENTIFIER') {
+          const elemName = this.expect('IDENTIFIER').value;
+          this.expect('SYMBOL', '.');
+          const propName = this.expect('IDENTIFIER').value;
+          
+          // With value: element.property: value;
+          if (this.peek().value === ':') {
+            this.pos++;
+            const value = this.parseExpression();
+            actions.push({ 
+              type: 'assignment', 
+              key: `${elemName}.${propName}`, 
+              value 
+            });
+          }
+          // Boolean flag: element.property;
+          else if (this.peek().value === ';') {
+            this.pos++;
+            actions.push({ 
+              type: 'assignment', 
+              key: `${elemName}.${propName}`, 
+              value: { type: 'boolean', value: true }
+            });
+          }
+        }
+        // Regular assignment: key: value;
+        else if (next.value === ':') {
+          const key = this.expect('IDENTIFIER').value;
+          this.expect('SYMBOL', ':');
+          const value = this.parseExpression();
+          actions.push({ type: 'assignment', key, value });
+          if (this.peek().value === ';') this.pos++;
+        }
+        // Boolean flag: key;
+        else if (next.value === ';') {
+          const key = this.expect('IDENTIFIER').value;
+          this.expect('SYMBOL', ';');
+          actions.push({ type: 'assignment', key, value: { type: 'boolean', value: true } });
+        }
+        else {
+          this.pos++;
+        }
       } else {
         this.pos++;
       }
@@ -420,7 +467,19 @@ class PSLParser {
         this.pos++;
         return { type: 'boolean', value: value === 'true' };
       }
+      if (value === 'red' || value === 'blue' || value === 'green' || value === 'white' || value === 'black') {
+        this.pos++;
+        return { type: 'string', value };
+      }
       this.pos++;
+      
+      // Check for dot notation (var.property)
+      if (this.peek().value === '.') {
+        this.pos++;
+        const property = this.expect('IDENTIFIER').value;
+        return { type: 'dotNotation', object: value, property };
+      }
+      
       return { type: 'variable', value };
     }
     
@@ -509,13 +568,14 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
 
   generateCSS() {
     return `
-      body { background: #f5f5f5; font-family: Arial, sans-serif; }
-      [data-page] { padding: 20px; }
+      body { background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+      [data-page] { padding: 20px; display: flex; flex-direction: column; }
       button { padding: 10px 15px; cursor: pointer; background: #2196F3; color: white; border: none; border-radius: 4px; }
       button:hover { background: #1976D2; }
       input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
       h1, h2, h3 { margin: 10px 0; }
       p { margin: 8px 0; }
+      div, h1, h2, h3, p, button, input { box-sizing: border-box; }
     `;
   }
 
@@ -526,7 +586,13 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
     for (const pageName of pageNames) {
       const page = this.ast.pages[pageName];
       html += `<div data-page="${pageName}" class="page ${pageName === pageNames[0] ? 'active' : ''}">`;
-      html += page.elements.map(el => this.generateElement(el, pageName)).join('\n');
+      html += page.elements.map((el, idx) => {
+        // Store element reference in global scope if it has children or handlers
+        if (el.children.length > 0 || el.handlers.length > 0) {
+          return this.generateElement(el, pageName, idx);
+        }
+        return this.generateElement(el, pageName);
+      }).join('\n');
       html += `</div>`;
     }
     return html;
@@ -539,13 +605,21 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
 
     // Build style and classes
     let styles = [];
-    let classes = [];
+    let hasPositioning = false;
+    let justifyContent = null;
+    let alignItems = null;
+    let flexDirection = 'row';
+    let elementVarName = null;
 
     // Apply properties as styles or attributes
     for (const [key, value] of Object.entries(el.props)) {
       const strValue = this.valueToString(value);
+      
       if (key === 'text') {
         // Will be added as content
+      } else if (key === 'var') {
+        // Store element reference
+        elementVarName = strValue;
       } else if (key === 'size') {
         styles.push(`font-size: ${strValue}px`);
       } else if (key === 'font') {
@@ -569,9 +643,53 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
         if (strValue === 'true' || strValue === '1') {
           styles.push(`display: none`);
         }
+      }
+      // Flexbox positioning
+      else if (key === 'center') {
+        if (strValue === 'true' || strValue === '1') {
+          hasPositioning = true;
+          justifyContent = 'center';
+          alignItems = 'center';
+          styles.push(`display: flex`);
+        }
+      } else if (key === 'left') {
+        hasPositioning = true;
+        justifyContent = 'flex-start';
+        styles.push(`display: flex`);
+      } else if (key === 'right') {
+        hasPositioning = true;
+        justifyContent = 'flex-end';
+        styles.push(`display: flex`);
+      } else if (key === 'top') {
+        hasPositioning = true;
+        flexDirection = 'column';
+        alignItems = 'flex-start';
+        styles.push(`display: flex`);
+      } else if (key === 'bottom') {
+        hasPositioning = true;
+        flexDirection = 'column';
+        alignItems = 'flex-end';
+        styles.push(`display: flex`);
+      } else if (key === 'width') {
+        styles.push(`width: ${strValue}px`);
+      } else if (key === 'height') {
+        styles.push(`height: ${strValue}px`);
+      } else if (key === 'padding') {
+        styles.push(`padding: ${strValue}px`);
+      } else if (key === 'margin') {
+        styles.push(`margin: ${strValue}px`);
+      } else if (key === 'gap') {
+        styles.push(`gap: ${strValue}px`);
       } else {
         html += ` data-${key}="${strValue}"`;
       }
+    }
+
+    // Apply flexbox settings
+    if (hasPositioning) {
+      styles.push(`flex-direction: ${flexDirection}`);
+      if (justifyContent) styles.push(`justify-content: ${justifyContent}`);
+      if (alignItems) styles.push(`align-items: ${alignItems}`);
     }
 
     if (styles.length > 0) {
@@ -601,26 +719,83 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
 
     html += `</${tag}>`;
 
-    // Add event handlers
+    // Add event handlers and store element reference
+    let handlerCode = '';
     if (el.handlers && el.handlers.length > 0) {
-      html += `<script>
+      handlerCode = `
         (function() {
-          const el = document.getElementById('${id}');
-          ${el.handlers.map(h => `
-            el.addEventListener('${h.event}', function() {
-              ${h.actions.map(a => this.actionToJS(a)).join('\n')}
-            });
-          `).join('\n')}
+          document.addEventListener('DOMContentLoaded', function() {
+            const el = document.getElementById('${id}');
+            if (!el) return;
+            ${elementVarName ? `window.psl_elements.${elementVarName} = el;` : ''}
+            ${el.handlers.map(h => {
+              const eventName = h.event.replace('on', '').toLowerCase();
+              const actions = h.actions.map(a => this.actionToJS(a, id)).join('\n');
+              return `el.addEventListener('${eventName}', function() { ${actions} });`;
+            }).join('\n')}
+          });
         })();
-      </script>`;
+      `;
+    } else if (elementVarName) {
+      handlerCode = `
+        (function() {
+          document.addEventListener('DOMContentLoaded', function() {
+            const el = document.getElementById('${id}');
+            if (el) window.psl_elements.${elementVarName} = el;
+          });
+        })();
+      `;
+    }
+
+    if (handlerCode) {
+      html += `<script>${handlerCode}</script>`;
     }
 
     return html;
   }
 
-  actionToJS(action) {
+  actionToJS(action, elementId) {
     if (action.type === 'assignment') {
-      return `window.psl_vars.${action.key} = ${this.valueToJSString(action.value)};`;
+      const key = action.key;
+      const value = this.valueToJSString(action.value);
+      
+      // Check if it's a dot notation: elementVar.property = value
+      if (key.includes('.')) {
+        const [elemName, prop] = key.split('.');
+        return `
+          if (window.psl_elements.${elemName}) {
+            const el = window.psl_elements.${elemName};
+            const propValue = ${value};
+            if ('${prop}' === 'text') {
+              el.textContent = propValue;
+            } else if ('${prop}' === 'bg') {
+              el.style.backgroundColor = propValue;
+            } else if ('${prop}' === 'color') {
+              el.style.color = propValue;
+            } else if ('${prop}' === 'size') {
+              el.style.fontSize = propValue + 'px';
+            } else if ('${prop}' === 'hide') {
+              el.style.display = (propValue === true || propValue === 1 || propValue === '1') ? 'none' : 'block';
+            } else if ('${prop}' === 'show') {
+              el.style.display = (propValue === false || propValue === 0 || propValue === '0') ? 'none' : 'block';
+            } else if ('${prop}' === 'radius') {
+              el.style.borderRadius = propValue + 'px';
+            } else if ('${prop}' === 'border-size') {
+              el.style.borderWidth = propValue + 'px';
+            } else if ('${prop}' === 'border-color') {
+              el.style.borderColor = propValue;
+            } else if ('${prop}' === 'padding') {
+              el.style.padding = propValue + 'px';
+            } else if ('${prop}' === 'margin') {
+              el.style.margin = propValue + 'px';
+            } else {
+              el.setAttribute('data-' + '${prop}', propValue);
+            }
+          }
+        `;
+      } else {
+        return `window.psl_vars.${key} = ${value};`;
+      }
     }
     return '';
   }
@@ -632,7 +807,7 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
   }
 
   generateJavaScript() {
-    let js = `window.psl_vars = {};`;
+    let js = `window.psl_vars = {}; window.psl_elements = {};`;
     
     // Global variables
     for (const [name, value] of Object.entries(this.ast.globalVariables)) {
