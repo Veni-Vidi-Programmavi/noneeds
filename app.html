@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2196F3">
+    <title>drfbc</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; }
+        [data-page] { display: none; }
+        [data-page].active { display: block; }
+        
+      body { background: #f5f5f5; font-family: Arial, sans-serif; }
+      [data-page] { padding: 20px; }
+      button { padding: 10px 15px; cursor: pointer; background: #2196F3; color: white; border: none; border-radius: 4px; }
+      button:hover { background: #1976D2; }
+      input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+      h1, h2, h3 { margin: 10px 0; }
+      p { margin: 8px 0; }
+    
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div data-page="accueil" class="page active"><h1 id="el_0">Coucou</h1><script>
+        (function() {
+          const el = document.getElementById('el_0');
+          
+            el.addEventListener('onClick', function() {
+              window.psl_vars.text = "bonjour";
+            });
+          
+        })();
+      </script></div>
+    </div>
+    <script>
+        window.psl_vars = {};window.showPage = function(name) {
+      document.querySelectorAll('[data-page]').forEach(p => p.classList.remove('active'));
+      const p = document.querySelector('[data-page="' + name + '"]');
+      if (p) p.classList.add('active');
+    };
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register(
+                'data:application/javascript;base64,c2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiBlLndhaXRVbnRpbChzZWxmLnNraXBXYWl0aW5nKCkpKTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdhY3RpdmF0ZScsIGUgPT4gZS53YWl0VW50aWwoc2VsZi5jbGllbnRzLmNsYWltKCkpKTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGUgPT4gZS5yZXNwb25kV2l0aChmZXRjaChlLnJlcXVlc3QpLmNhdGNoKCgpID0+IG5ldyBSZXNwb25zZSgnT2ZmbGluZScpKSkpOw==',
+                { scope: '/' }
+            ).catch(e => console.log('SW error:', e));
+        }
+    </script>
+</body>
+</html>

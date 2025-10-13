@@ -1,0 +1,10 @@
+#name = "drfbc"
+#author = "rebd"
+
+page accueil {
+    title("Coucou") {
+        onClick {
+            text: "bonjour";
+        }
+    }
+}
