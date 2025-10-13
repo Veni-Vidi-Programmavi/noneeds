@@ -32,7 +32,4 @@ Après installation, la commande noneed est disponible dans ton terminal.
 🧑‍💻 Auteur
 Thibault — passionné par les PWA, le offline-first et la création d'outils développeur.
 
-🪪 Licence
-Ce projet est sous licence MIT.
-
 ⭐ Si tu aimes le projet, pense à laisser une étoile sur GitHub !
