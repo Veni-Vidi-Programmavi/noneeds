@@ -61,7 +61,20 @@ switch (entry[0]) {
         infos["entry"] = "version"
         break;
     default:
-        f.log(chalk.red.bold(`ERREUR: Unknowed command '${entry[0]}'`));
+        if (entry[0]) {
+            f.log(chalk.red.bold(`ERREUR: Unknowed command '${entry[0]}'`));
+        } else {
+            f.log(chalk.gray("=> Opening the menu"));
+            console.log(chalk.bgWhite.underline.bold.blue("\n------------------Welcome to Noneed------------------"))
+            console.log(chalk.gray("| Here you're gonna enjoy the coding with a simple  |\n")+chalk.gray.underline("| and usefool PWA maker                             |\n"));
+            console.log(chalk.underline.bold.bgCyan("\n|------------------Commands Center------------------|"));
+            console.log(chalk.bgCyan(chalk.bgWhite.underline.blue.bold("|  noneed -v         ")+"=> "+chalk.underline("To see your current version |")));
+            console.log(chalk.bgCyan(chalk.bgWhite.underline.blue.bold("|  noneed log        ")+"=> "+chalk.underline("To see your log history     |")));
+            console.log(chalk.bgCyan(chalk.bgWhite.underline.blue.bold("|  noneed log reset  ")+"=> "+chalk.underline("To reset your log history   |")));
+            console.log(chalk.bgCyan(chalk.bgWhite.underline.blue.bold("|  noneed list       ")+"=> "+chalk.underline("To show all your projects   |")));
+            console.log(chalk.bgCyan(chalk.bgWhite.underline.blue.bold("|  noneed create pwa ")+"=> "+chalk.underline("To create an pwa project    |")));
+            console.log(chalk.bgCyan.underline.bold.blue("-----------------------------------------------------"));
+        }
 }
 
 module.exports = infos;
