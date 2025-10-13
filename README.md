@@ -19,7 +19,7 @@
 
 Installe la CLI **NoNeed** globalement :
 
-### ⚠️  Attention, la CLI n'a aucun intérêt pour l'instant car elle au début de son développemt
+### ⚠️  Attention, la CLI n'a aucun intérêt pour l'instant car elle est au début de son développemt
 ```bash
 sudo npm install -g noneed
 ```
