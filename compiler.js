@@ -544,6 +544,10 @@ class PSLCompiler {
     </style>
 </head>
 <body>
+    <script>
+        window.psl_vars = {};
+        window.psl_elements = {};
+    </script>
     <div id="app">
         ${this.generatePages()}
     </div>
@@ -796,7 +800,7 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
   }
 
   generateJavaScript() {
-    let js = `window.psl_vars = {}; window.psl_elements = {};`;
+    let js = ``;
     
     // Global variables
     for (const [name, value] of Object.entries(this.ast.globalVariables)) {

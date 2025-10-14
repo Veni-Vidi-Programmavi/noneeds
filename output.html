@@ -23,6 +23,10 @@
     </style>
 </head>
 <body>
+    <script>
+        window.psl_vars = {};
+        window.psl_elements = {};
+    </script>
     <div id="app">
         <div data-page="accueil" class="page active"><h1 id="el_0" style="background-color: red; color: white; display: flex; padding: 10px; border-radius: 10px; flex-direction: row; justify-content: center; align-items: center">Coucou</h1><script>
         (function() {
@@ -75,7 +79,7 @@
       </script></div>
     </div>
     <script>
-        window.psl_vars = {}; window.psl_elements = {};window.showPage = function(name) {
+        window.showPage = function(name) {
       document.querySelectorAll('[data-page]').forEach(p => p.classList.remove('active'));
       const p = document.querySelector('[data-page="' + name + '"]');
       if (p) p.classList.add('active');
