@@ -26,22 +26,22 @@
     <div id="app">
         <div data-page="accueil" class="page active"><h1 id="el_0" style="background-color: red; color: white; display: flex; padding: 10px; border-radius: 10px; flex-direction: row; justify-content: center; align-items: center">Coucou</h1><script>
         (function() {
-          document.addEventListener('DOMContentLoaded', function() {
-            const el = document.getElementById('el_0');
-            if (el) window.psl_elements.super = el;
-          });
+          const el = document.getElementById('el_0');
+          if (!el) return;
+          window.psl_elements.super = el;
+          
         })();
       </script>
-<button id="el_1">Cliquer</button><script>
+<button id="el_1" style="display: flex; flex-direction: row; justify-content: center; align-items: center">Cliquer</button><script>
         (function() {
-          document.addEventListener('DOMContentLoaded', function() {
-            const el = document.getElementById('el_1');
-            if (!el) return;
-            
-            el.addEventListener('click', function() { 
-          if (window.psl_elements.super) {
-            const el = window.psl_elements.super;
+          const el = document.getElementById('el_1');
+          if (!el) return;
+          window.psl_elements.button = el;
+          el.addEventListener('click', function() { 
+          if (window.psl_elements && window.psl_elements['super']) {
+            const el = window.psl_elements['super'];
             const propValue = true;
+            console.log('Modifying super.hide to', propValue);
             if ('hide' === 'text') {
               el.textContent = propValue;
             } else if ('hide' === 'bg') {
@@ -67,9 +67,10 @@
             } else {
               el.setAttribute('data-' + 'hide', propValue);
             }
+          } else {
+            console.warn('Element super not found in psl_elements');
           }
          });
-          });
         })();
       </script></div>
     </div>

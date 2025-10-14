@@ -12,6 +12,8 @@ page accueil {
 
     }
     button("Cliquer") {
+        var: button;
+        center;
         onClick {
             super.hide;
         }

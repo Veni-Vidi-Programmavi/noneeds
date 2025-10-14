@@ -721,33 +721,19 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
 
     // Add event handlers and store element reference
     let handlerCode = '';
-    if (el.handlers && el.handlers.length > 0) {
+    if (el.handlers && el.handlers.length > 0 || elementVarName) {
       handlerCode = `
         (function() {
-          document.addEventListener('DOMContentLoaded', function() {
-            const el = document.getElementById('${id}');
-            if (!el) return;
-            ${elementVarName ? `window.psl_elements.${elementVarName} = el;` : ''}
-            ${el.handlers.map(h => {
-              const eventName = h.event.replace('on', '').toLowerCase();
-              const actions = h.actions.map(a => this.actionToJS(a, id)).join('\n');
-              return `el.addEventListener('${eventName}', function() { ${actions} });`;
-            }).join('\n')}
-          });
+          const el = document.getElementById('${id}');
+          if (!el) return;
+          ${elementVarName ? `window.psl_elements.${elementVarName} = el;` : ''}
+          ${el.handlers.map(h => {
+            const eventName = h.event.replace('on', '').toLowerCase();
+            const actions = h.actions.map(a => this.actionToJS(a, id)).join('\n');
+            return `el.addEventListener('${eventName}', function() { ${actions} });`;
+          }).join('\n')}
         })();
       `;
-    } else if (elementVarName) {
-      handlerCode = `
-        (function() {
-          document.addEventListener('DOMContentLoaded', function() {
-            const el = document.getElementById('${id}');
-            if (el) window.psl_elements.${elementVarName} = el;
-          });
-        })();
-      `;
-    }
-
-    if (handlerCode) {
       html += `<script>${handlerCode}</script>`;
     }
 
@@ -763,9 +749,10 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
       if (key.includes('.')) {
         const [elemName, prop] = key.split('.');
         return `
-          if (window.psl_elements.${elemName}) {
-            const el = window.psl_elements.${elemName};
+          if (window.psl_elements && window.psl_elements['${elemName}']) {
+            const el = window.psl_elements['${elemName}'];
             const propValue = ${value};
+            console.log('Modifying ${elemName}.${prop} to', propValue);
             if ('${prop}' === 'text') {
               el.textContent = propValue;
             } else if ('${prop}' === 'bg') {
@@ -791,6 +778,8 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
             } else {
               el.setAttribute('data-' + '${prop}', propValue);
             }
+          } else {
+            console.warn('Element ${elemName} not found in psl_elements');
           }
         `;
       } else {
