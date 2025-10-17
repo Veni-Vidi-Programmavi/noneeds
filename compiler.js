@@ -3,6 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
+// --- PSLTokenizer ---
+
 class PSLTokenizer {
   constructor(input) {
     this.input = input;
@@ -24,6 +26,18 @@ class PSLTokenizer {
         continue;
       }
 
+      // Gestion des opérateurs à deux caractères
+      if (this.match('==')) {
+        this.tokens.push({ type: 'OPERATOR', value: '==' });
+        this.pos += 2;
+        continue;
+      }
+      if (this.match('!=')) {
+        this.tokens.push({ type: 'OPERATOR', value: '!=' });
+        this.pos += 2;
+        continue;
+      }
+
       const char = this.input[this.pos];
 
       if (char === '#') {
@@ -37,6 +51,8 @@ class PSLTokenizer {
         this.readString();
       } else if ('{}()[];:,=.'.includes(char)) {
         this.tokens.push({ type: 'SYMBOL', value: char });
+        this.pos++;
+      } else if (char === '%') {
         this.pos++;
       } else {
         this.pos++;
@@ -88,6 +104,21 @@ class PSLTokenizer {
       value += this.input[this.pos];
       this.pos++;
     }
+    
+    const unitStart = this.pos;
+    let unit = '';
+    while (this.pos < this.input.length && /[a-zA-Z%]/.test(this.input[this.pos])) {
+      unit += this.input[this.pos];
+      this.pos++;
+    }
+    
+    const validUnits = ['px', 'vw', 'vh', '%', 'em', 'rem', 'vmin', 'vmax', 'cm', 'mm', 'in', 'pt', 'pc'];
+    if (validUnits.includes(unit.toLowerCase()) || unit === '%') {
+      value += unit;
+    } else {
+      this.pos = unitStart;
+    }
+    
     this.tokens.push({ type: 'NUMBER', value });
   }
 
@@ -110,10 +141,13 @@ class PSLTokenizer {
   }
 }
 
+// --- PSLParser ---
+
 class PSLParser {
   constructor(tokens) {
     this.tokens = tokens;
     this.pos = 0;
+    this.ast = null; 
   }
 
   parse() {
@@ -123,8 +157,11 @@ class PSLParser {
       pages: {},
       functions: {},
       globalVariables: {},
-      statements: []
+      statements: [],
+      keyHandlers: [] 
     };
+    
+    this.ast = ast; 
 
     while (!this.isAtEnd()) {
       this.skipWhitespace();
@@ -140,8 +177,10 @@ class PSLParser {
         const name = this.peek().value;
         const lookAhead = this.peekAhead(1);
         
-        if (lookAhead.value === '(') {
-          // Function or element
+        if (name === 'onKey' && lookAhead.value === '(') {
+          ast.keyHandlers.push(this.parseKeyHandler());
+        }
+        else if (lookAhead.value === '(') {
           if (this.peekAhead(2).value === '{') {
             this.expect('IDENTIFIER');
             ast.functions[name] = this.parseFunction();
@@ -149,11 +188,9 @@ class PSLParser {
             this.pos++;
           }
         } else if (lookAhead.value === '{') {
-          // Page
           this.expect('IDENTIFIER');
           ast.pages[name] = this.parsePage();
         } else if (lookAhead.value === '=') {
-          // Global variable
           this.expect('IDENTIFIER');
           this.expect('SYMBOL', '=');
           const value = this.parseExpression();
@@ -163,10 +200,8 @@ class PSLParser {
           this.pos++;
         }
       } else if (this.peek().value === 'if') {
-        // Top-level if statement
         ast.statements.push(this.parseIf());
       } else if (this.peek().value === 'for') {
-        // Top-level for statement
         ast.statements.push(this.parseFor());
       } else {
         this.pos++;
@@ -175,12 +210,25 @@ class PSLParser {
 
     return ast;
   }
+  
+  parseKeyHandler() {
+    this.expect('IDENTIFIER', 'onKey');
+    this.expect('SYMBOL', '(');
+    const keyExpression = this.parseExpression(); 
+    this.expect('SYMBOL', ')');
+    
+    this.expect('SYMBOL', '{');
+    const actions = this.parseEventHandlerBody(); 
+    this.expect('SYMBOL', '}');
+
+    return { type: 'keyHandler', key: keyExpression, actions };
+  }
 
   parseFor() {
-    this.expect('IDENTIFIER'); // for
+    this.expect('IDENTIFIER'); 
     this.expect('SYMBOL', '(');
     const varName = this.expect('IDENTIFIER').value;
-    this.expect('IDENTIFIER'); // in or =
+    this.expect('IDENTIFIER'); 
     const collection = this.parseExpression();
     this.expect('SYMBOL', ')');
     this.expect('SYMBOL', '{');
@@ -217,6 +265,14 @@ class PSLParser {
       this.skipWhitespace();
       if (this.peek().value === '}') break;
       
+      const token = this.peek();
+      const nextToken = this.peekAhead(1);
+
+      if (token.value === 'onKey' && nextToken.value === '(') {
+          this.ast.keyHandlers.push(this.parseKeyHandler());
+          continue; 
+      }
+      
       const el = this.parseTopLevelElement();
       if (el) elements.push(el);
     }
@@ -225,21 +281,41 @@ class PSLParser {
     return { elements };
   }
 
+  parseElementBlock() {
+      const elements = [];
+      while (this.peek().value !== '}' && !this.isAtEnd()) {
+          this.skipWhitespace();
+          if (this.peek().value === '}') break;
+          const el = this.parseTopLevelElement();
+          if (el) elements.push(el);
+      }
+      return elements;
+  }
+
   parseTopLevelElement() {
     if (this.peek().type !== 'IDENTIFIER') return null;
     
     const elementName = this.peek().value;
-    this.pos++; // consume identifier
+    const lookAhead = this.peekAhead(1);
+
+    if (elementName === 'onKey' && lookAhead.value === '(') {
+        return null; 
+    }
+    
+    this.pos++; 
     
     this.expect('SYMBOL', '(');
     
     let props = {};
     let directText = null;
     
-    // Parse arguments inside () - can be just a string or nothing
     if (this.peek().type === 'STRING') {
       directText = this.parseExpression();
-      props.text = directText;
+      if (elementName === 'image') {
+        props.src = directText;
+      } else {
+        props.text = directText;
+      }
     }
     
     this.expect('SYMBOL', ')');
@@ -247,7 +323,6 @@ class PSLParser {
     let children = [];
     let handlers = [];
 
-    // Parse body { ... } - properties, handlers, nested elements, conditions
     if (this.peek().value === '{') {
       this.pos++;
       while (this.peek().value !== '}' && !this.isAtEnd()) {
@@ -257,29 +332,30 @@ class PSLParser {
         const token = this.peek();
         const nextToken = this.peekAhead(1);
         
-        // Event handler: onClick { ... }
         if (token.type === 'IDENTIFIER' && ['onClick', 'onHover', 'onChange', 'onFocus', 'onBlur', 'onSubmit'].includes(token.value) && nextToken.value === '{') {
           const eventName = this.expect('IDENTIFIER').value;
           handlers.push(this.parseEventHandler(eventName));
         }
-        // If statement: if (condition) { ... }
         else if (token.value === 'if' && nextToken.value === '(') {
-          this.pos++;
+          this.pos++; 
+
           this.expect('SYMBOL', '(');
           const condition = this.parseExpression();
           this.expect('SYMBOL', ')');
           this.expect('SYMBOL', '{');
-          const ifChildren = [];
-          while (this.peek().value !== '}' && !this.isAtEnd()) {
-            this.skipWhitespace();
-            if (this.peek().value === '}') break;
-            const el = this.parseTopLevelElement();
-            if (el) ifChildren.push(el);
-          }
+          const ifChildren = this.parseElementBlock();
           this.expect('SYMBOL', '}');
-          children.push({ type: 'if', condition, children: ifChildren });
+
+          let elseChildren = null;
+          if (this.peek().value === 'else') {
+              this.pos++;
+              this.expect('SYMBOL', '{');
+              elseChildren = this.parseElementBlock();
+              this.expect('SYMBOL', '}');
+          }
+
+          children.push({ type: 'if', condition, children: ifChildren, elseChildren });
         }
-        // Property assignment: key: value; OR just key; (for boolean flags)
         else if (token.type === 'IDENTIFIER' && nextToken.value === ':') {
           const key = this.expect('IDENTIFIER').value;
           this.expect('SYMBOL', ':');
@@ -287,13 +363,11 @@ class PSLParser {
           props[key] = value;
           if (this.peek().value === ';') this.pos++;
         }
-        // Boolean flag: just key; (without : or =)
         else if (token.type === 'IDENTIFIER' && nextToken.value === ';') {
           const key = this.expect('IDENTIFIER').value;
           this.expect('SYMBOL', ';');
           props[key] = { type: 'boolean', value: true };
         }
-        // Nested element: name(...)
         else if (token.type === 'IDENTIFIER' && nextToken.value === '(') {
           const el = this.parseTopLevelElement();
           if (el) children.push(el);
@@ -340,25 +414,43 @@ class PSLParser {
     return props;
   }
 
-  parseEventHandler(eventName) {
-    this.expect('SYMBOL', '{');
+  parseEventHandlerBody() {
     const actions = [];
     
     while (this.peek().value !== '}' && !this.isAtEnd()) {
       this.skipWhitespace();
       if (this.peek().value === '}') break;
       
-      if (this.peek().type === 'IDENTIFIER') {
-        const name = this.peek().value;
-        const next = this.peekAhead(1);
+      const token = this.peek();
+      const next = this.peekAhead(1);
+      
+      if (token.value === 'if' && next.value === '(') {
+        actions.push(this.parseIfAction());
+        continue; 
+      }
+      
+      if (token.type === 'IDENTIFIER') {
+        const name = token.value;
         
-        // Check for element.property: value or element.property;
+        if (next.value === '(') {
+            this.pos++; 
+            this.expect('SYMBOL', '(');
+            const args = [];
+            while (this.peek().value !== ')') {
+                args.push(this.parseExpression());
+                if (this.peek().value === ',') this.pos++;
+            }
+            this.expect('SYMBOL', ')');
+            actions.push({ type: 'functionCall', name, args });
+            if (this.peek().value === ';') this.pos++;
+            continue;
+        }
+        
         if (next.value === '.' && this.peekAhead(2).type === 'IDENTIFIER') {
           const elemName = this.expect('IDENTIFIER').value;
           this.expect('SYMBOL', '.');
           const propName = this.expect('IDENTIFIER').value;
           
-          // With value: element.property: value;
           if (this.peek().value === ':') {
             this.pos++;
             const value = this.parseExpression();
@@ -368,7 +460,6 @@ class PSLParser {
               value 
             });
           }
-          // Boolean flag: element.property;
           else if (this.peek().value === ';') {
             this.pos++;
             actions.push({ 
@@ -377,20 +468,28 @@ class PSLParser {
               value: { type: 'boolean', value: true }
             });
           }
+          else {
+             actions.push({ 
+              type: 'assignment', 
+              key: `${elemName}.${propName}`, 
+              value: { type: 'boolean', value: true }
+            });
+          }
+          continue;
         }
-        // Regular assignment: key: value;
         else if (next.value === ':') {
           const key = this.expect('IDENTIFIER').value;
           this.expect('SYMBOL', ':');
           const value = this.parseExpression();
           actions.push({ type: 'assignment', key, value });
           if (this.peek().value === ';') this.pos++;
+          continue;
         }
-        // Boolean flag: key;
         else if (next.value === ';') {
           const key = this.expect('IDENTIFIER').value;
           this.expect('SYMBOL', ';');
           actions.push({ type: 'assignment', key, value: { type: 'boolean', value: true } });
+          continue;
         }
         else {
           this.pos++;
@@ -400,6 +499,12 @@ class PSLParser {
       }
     }
     
+    return actions;
+  }
+
+  parseEventHandler(eventName) {
+    this.expect('SYMBOL', '{');
+    const actions = this.parseEventHandlerBody();
     this.expect('SYMBOL', '}');
     return { event: eventName, actions };
   }
@@ -411,7 +516,10 @@ class PSLParser {
       this.skipWhitespace();
       if (this.peek().value === '}') break;
       
-      if (this.peek().type === 'IDENTIFIER' && this.peekAhead(1).value === '(') {
+      if (this.peek().value === 'if') {
+        statements.push(this.parseIfStatement());
+      } 
+      else if (this.peek().type === 'IDENTIFIER' && this.peekAhead(1).value === '(') {
         const funcName = this.expect('IDENTIFIER').value;
         this.expect('SYMBOL', '(');
         const args = [];
@@ -422,15 +530,20 @@ class PSLParser {
         this.expect('SYMBOL', ')');
         statements.push({ type: 'functionCall', name: funcName, args });
         if (this.peek().value === ';') this.pos++;
-      } else if (this.peek().value === 'if') {
-        statements.push(this.parseIf());
-      } else if (this.peek().type === 'IDENTIFIER' && this.peekAhead(1).value === '=') {
+      } 
+      else if (this.peek().type === 'IDENTIFIER' && this.peekAhead(1).value === '=') {
         const varName = this.expect('IDENTIFIER').value;
         this.expect('SYMBOL', '=');
         const value = this.parseExpression();
         statements.push({ type: 'assignment', varName, value });
         if (this.peek().value === ';') this.pos++;
-      } else {
+      } 
+      else if (this.peek().type === 'IDENTIFIER' && this.peekAhead(1).value === ';') {
+        const varName = this.expect('IDENTIFIER').value;
+        this.expect('SYMBOL', ';');
+        statements.push({ type: 'assignment', varName, value: { type: 'boolean', value: true } });
+      }
+      else {
         this.pos++;
       }
     }
@@ -438,19 +551,67 @@ class PSLParser {
     return statements;
   }
 
-  parseIf() {
-    this.expect('IDENTIFIER'); // if
+  parseIfAction() {
+    this.expect('IDENTIFIER', 'if'); 
     this.expect('SYMBOL', '(');
     const condition = this.parseExpression();
     this.expect('SYMBOL', ')');
     this.expect('SYMBOL', '{');
-    const body = this.parseBlock();
+    const body = this.parseEventHandlerBody(); 
     this.expect('SYMBOL', '}');
+
+    let elseBody = null;
+    if (this.peek().value === 'else') {
+        this.pos++;
+        this.expect('SYMBOL', '{');
+        elseBody = this.parseEventHandlerBody(); 
+        this.expect('SYMBOL', '}');
+    }
     
-    return { type: 'if', condition, body };
+    return { type: 'if', condition, body, elseBody };
+  }
+
+  parseIfStatement() {
+    this.expect('IDENTIFIER', 'if'); 
+    this.expect('SYMBOL', '(');
+    const condition = this.parseExpression();
+    this.expect('SYMBOL', ')');
+    this.expect('SYMBOL', '{');
+    const body = this.parseBlock(); 
+    this.expect('SYMBOL', '}');
+
+    let elseBody = null;
+    if (this.peek().value === 'else') {
+        this.pos++;
+        this.expect('SYMBOL', '{');
+        elseBody = this.parseBlock(); 
+        this.expect('SYMBOL', '}');
+    }
+    
+    return { type: 'if', condition, body, elseBody };
   }
 
   parseExpression() {
+    let left = this.parsePrimary();
+
+    const operatorToken = this.peek();
+    if (operatorToken.type === 'OPERATOR' && (operatorToken.value === '==' || operatorToken.value === '!=')) {
+      this.pos++; 
+      const operator = operatorToken.value;
+      const right = this.parseExpression(); 
+
+      return {
+        type: 'binaryExpression',
+        operator: operator,
+        left: left,
+        right: right
+      };
+    }
+
+    return left;
+  }
+
+  parsePrimary() {
     const token = this.peek();
     
     if (token.type === 'STRING') {
@@ -467,13 +628,9 @@ class PSLParser {
         this.pos++;
         return { type: 'boolean', value: value === 'true' };
       }
-      if (value === 'red' || value === 'blue' || value === 'green' || value === 'white' || value === 'black') {
-        this.pos++;
-        return { type: 'string', value };
-      }
+      
       this.pos++;
       
-      // Check for dot notation (var.property)
       if (this.peek().value === '.') {
         this.pos++;
         const property = this.expect('IDENTIFIER').value;
@@ -514,6 +671,8 @@ class PSLParser {
   }
 }
 
+// --- PSLCompiler ---
+
 class PSLCompiler {
   constructor(ast) {
     this.ast = ast;
@@ -535,6 +694,10 @@ class PSLCompiler {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#2196F3">
     <title>${this.getMetadata('name') || 'App'}</title>
+    <script>
+        window.psl_vars = {};
+        window.psl_elements = {};
+    </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; }
@@ -549,7 +712,7 @@ class PSLCompiler {
     </div>
     <script>
         ${js}
-        if ('serviceWorker' in navigator) {
+        if ('serviceWorker' in navigator && location.protocol === 'https:') {
             navigator.serviceWorker.register(
                 'data:application/javascript;base64,${Buffer.from(this.generateServiceWorker()).toString('base64')}',
                 { scope: '/' }
@@ -569,13 +732,13 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
   generateCSS() {
     return `
       body { background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; }
-      [data-page] { padding: 20px; display: flex; flex-direction: column; }
+      [data-page] { padding: 20px; display: flex !important; flex-direction: column; gap: 10px; }
       button { padding: 10px 15px; cursor: pointer; background: #2196F3; color: white; border: none; border-radius: 4px; }
       button:hover { background: #1976D2; }
       input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-      h1, h2, h3 { margin: 10px 0; }
-      p { margin: 8px 0; }
+      h1, h2, h3, p { margin: 10px 0; }
       div, h1, h2, h3, p, button, input { box-sizing: border-box; }
+      img { height: 100px; }
     `;
   }
 
@@ -586,11 +749,7 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
     for (const pageName of pageNames) {
       const page = this.ast.pages[pageName];
       html += `<div data-page="${pageName}" class="page ${pageName === pageNames[0] ? 'active' : ''}">`;
-      html += page.elements.map((el, idx) => {
-        // Store element reference in global scope if it has children or handlers
-        if (el.children.length > 0 || el.handlers.length > 0) {
-          return this.generateElement(el, pageName, idx);
-        }
+      html += page.elements.map((el) => {
         return this.generateElement(el, pageName);
       }).join('\n');
       html += `</div>`;
@@ -598,38 +757,98 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
     return html;
   }
 
+  getStyleValue(key, strValue) {
+      if (['width', 'height', 'size', 'border-size', 'padding', 'margin', 'gap', 'radius'].includes(key)) {
+          const trimmed = String(strValue).trim();
+          
+          if (/\d+\.?\d*(px|vw|vh|%|em|rem|vmin|vmax|cm|mm|in|pt|pc)\s*$/i.test(trimmed) || trimmed.includes('%')) {
+              return trimmed;
+          }
+          
+          const numValue = parseFloat(trimmed);
+          if (!isNaN(numValue) && /^\d+\.?\d*$/.test(trimmed)) {
+              return `${trimmed}px`;
+          }
+          
+          return trimmed;
+      }
+      return strValue;
+  }
+
   generateElement(el, pageName) {
     const tag = this.getElementTag(el.name);
     const id = `el_${this.elementId++}`;
-    let html = `<${tag} id="${id}"`;
-
-    // Build style and classes
-    let styles = [];
-    let hasPositioning = false;
+    
+    // Check if we need a positioning wrapper
+    let needsWrapper = false;
+    let wrapperStyles = [];
     let justifyContent = null;
     let alignItems = null;
     let flexDirection = 'row';
+
+    for (const [key, value] of Object.entries(el.props)) {
+      const strValue = this.valueToString(value);
+      
+      if (key === 'center' && (strValue === 'true' || strValue === '1')) {
+        needsWrapper = true;
+        justifyContent = 'center';
+        alignItems = 'center';
+      } else if (key === 'left') {
+        needsWrapper = true;
+        justifyContent = 'flex-start';
+      } else if (key === 'right') {
+        needsWrapper = true;
+        justifyContent = 'flex-end';
+      } else if (key === 'top') {
+        needsWrapper = true;
+        flexDirection = 'column';
+        alignItems = 'flex-start';
+      } else if (key === 'bottom') {
+        needsWrapper = true;
+        flexDirection = 'column';
+        alignItems = 'flex-end';
+      }
+    }
+
+    // Build wrapper if needed
+    let wrapperOpen = '';
+    let wrapperClose = '';
+    
+    if (needsWrapper) {
+      wrapperStyles.push(`display: flex`);
+      wrapperStyles.push(`text-align: center`);
+      wrapperStyles.push(`flex-direction: ${flexDirection}`);
+      if (justifyContent) wrapperStyles.push(`justify-content: ${justifyContent}`);
+      if (alignItems) wrapperStyles.push(`align-items: ${alignItems}`);
+      
+      wrapperOpen = `<div style="${wrapperStyles.join('; ')}">`;
+      wrapperClose = `</div>`;
+    }
+
+    let html = `${wrapperOpen}<${tag} id="${id}"`;
+
+    let styles = [];
     let elementVarName = null;
 
-    // Apply properties as styles or attributes
     for (const [key, value] of Object.entries(el.props)) {
       const strValue = this.valueToString(value);
       
       if (key === 'text') {
-        // Will be added as content
+        // Text will be added after opening tag
+      } else if (key === 'src') {
+        html += ` src="${strValue}"`;
       } else if (key === 'var') {
-        // Store element reference
         elementVarName = strValue;
       } else if (key === 'size') {
-        styles.push(`font-size: ${strValue}px`);
+        styles.push(`font-size: ${this.getStyleValue(key, strValue)}`);
       } else if (key === 'font') {
         styles.push(`font-family: ${strValue}`);
       } else if (key === 'radius') {
-        styles.push(`border-radius: ${strValue}px`);
+        styles.push(`border-radius: ${this.getStyleValue(key, strValue)}`);
       } else if (key === 'border-color') {
         styles.push(`border-color: ${strValue}`);
       } else if (key === 'border-size') {
-        styles.push(`border-width: ${strValue}px`);
+        styles.push(`border-width: ${this.getStyleValue(key, strValue)}`);
         styles.push(`border-style: solid`);
       } else if (key === 'bg') {
         styles.push(`background-color: ${strValue}`);
@@ -643,53 +862,21 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
         if (strValue === 'true' || strValue === '1') {
           styles.push(`display: none`);
         }
-      }
-      // Flexbox positioning
-      else if (key === 'center') {
-        if (strValue === 'true' || strValue === '1') {
-          hasPositioning = true;
-          justifyContent = 'center';
-          alignItems = 'center';
-          styles.push(`display: flex`);
-        }
-      } else if (key === 'left') {
-        hasPositioning = true;
-        justifyContent = 'flex-start';
-        styles.push(`display: flex`);
-      } else if (key === 'right') {
-        hasPositioning = true;
-        justifyContent = 'flex-end';
-        styles.push(`display: flex`);
-      } else if (key === 'top') {
-        hasPositioning = true;
-        flexDirection = 'column';
-        alignItems = 'flex-start';
-        styles.push(`display: flex`);
-      } else if (key === 'bottom') {
-        hasPositioning = true;
-        flexDirection = 'column';
-        alignItems = 'flex-end';
-        styles.push(`display: flex`);
+      } else if (key === 'center' || key === 'left' || key === 'right' || key === 'top' || key === 'bottom') {
+        // Skip these as they're handled by the wrapper
       } else if (key === 'width') {
-        styles.push(`width: ${strValue}px`);
+        styles.push(`width: ${this.getStyleValue(key, strValue)}`);
       } else if (key === 'height') {
-        styles.push(`height: ${strValue}px`);
+        styles.push(`height: ${this.getStyleValue(key, strValue)}`);
       } else if (key === 'padding') {
-        styles.push(`padding: ${strValue}px`);
+        styles.push(`padding: ${this.getStyleValue(key, strValue)}`);
       } else if (key === 'margin') {
-        styles.push(`margin: ${strValue}px`);
+        styles.push(`margin: ${this.getStyleValue(key, strValue)}`);
       } else if (key === 'gap') {
-        styles.push(`gap: ${strValue}px`);
+        styles.push(`gap: ${this.getStyleValue(key, strValue)}`);
       } else {
         html += ` data-${key}="${strValue}"`;
       }
-    }
-
-    // Apply flexbox settings
-    if (hasPositioning) {
-      styles.push(`flex-direction: ${flexDirection}`);
-      if (justifyContent) styles.push(`justify-content: ${justifyContent}`);
-      if (alignItems) styles.push(`align-items: ${alignItems}`);
     }
 
     if (styles.length > 0) {
@@ -698,38 +885,65 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
 
     html += `>`;
 
-    // Add text content
-    if (el.props && el.props.text) {
+    if (el.props && el.props.text && tag !== 'img') {
       html += this.valueToString(el.props.text);
     }
 
-    // Add child elements
     if (el.children && el.children.length > 0) {
       for (const child of el.children) {
         if (child.type === 'if') {
-          // Conditionally render
-          if (this.evaluateCondition(child.condition)) {
-            html += child.children.map(c => this.generateElement(c, pageName)).join('\n');
+          const condJS = this.valueToJSString(child.condition);
+          const ifBlockId = `if_block_${this.elementId++}`;
+          const elseBlockId = child.elseChildren && child.elseChildren.length > 0 ? `else_block_${this.elementId++}` : null;
+
+          const ifChildrenHTML = child.children.map(c => this.generateElement(c, pageName)).join('');
+          html += `<div id="${ifBlockId}" class="psl-if-block" style="display: none; margin: 0;">\n${ifChildrenHTML}\n</div>`;
+
+          if (elseBlockId) {
+              const elseChildrenHTML = child.elseChildren.map(c => this.generateElement(c, pageName)).join('');
+              html += `<div id="${elseBlockId}" class="psl-else-block" style="display: none; margin: 0;">\n${elseChildrenHTML}\n</div>`;
           }
+          
+          let scriptContent = `
+            (function() {
+              const ifEl = document.getElementById('${ifBlockId}');
+              ${elseBlockId ? `const elseEl = document.getElementById('${elseBlockId}');` : ''}
+              
+              function updateConditionalDisplay() {
+                  if (${condJS}) {
+                      if (ifEl) ifEl.style.display = 'block';
+                      ${elseBlockId ? `if (elseEl) elseEl.style.display = 'none';` : ''}
+                  } else {
+                      if (ifEl) ifEl.style.display = 'none';
+                      ${elseBlockId ? `if (elseEl) elseEl.style.display = 'block';` : ''}
+                  }
+              }
+              updateConditionalDisplay();
+            })();
+          `;
+
+          html += `<script>${scriptContent}</script>`;
+
         } else {
           html += this.generateElement(child, pageName);
         }
       }
     }
 
-    html += `</${tag}>`;
+    html += `</${tag}>${wrapperClose}`;
 
-    // Add event handlers and store element reference
     let handlerCode = '';
-    if (el.handlers && el.handlers.length > 0 || elementVarName) {
+    
+    if (el.handlers.length > 0 || elementVarName) {
       handlerCode = `
         (function() {
           const el = document.getElementById('${id}');
           if (!el) return;
           ${elementVarName ? `window.psl_elements.${elementVarName} = el;` : ''}
+          
           ${el.handlers.map(h => {
             const eventName = h.event.replace('on', '').toLowerCase();
-            const actions = h.actions.map(a => this.actionToJS(a, id)).join('\n');
+            const actions = h.actions.map(a => this.actionToJS(a, id)).join('');
             return `el.addEventListener('${eventName}', function() { ${actions} });`;
           }).join('\n')}
         })();
@@ -745,7 +959,6 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
       const key = action.key;
       const value = this.valueToJSString(action.value);
       
-      // Check if it's a dot notation: elementVar.property = value
       if (key.includes('.')) {
         const [elemName, prop] = key.split('.');
         return `
@@ -755,6 +968,10 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
             console.log('Modifying ${elemName}.${prop} to', propValue);
             if ('${prop}' === 'text') {
               el.textContent = propValue;
+            } else if ('${prop}' === 'value') {
+              el.value = propValue;
+            } else if ('${prop}' === 'src') {
+              el.src = propValue;
             } else if ('${prop}' === 'bg') {
               el.style.backgroundColor = propValue;
             } else if ('${prop}' === 'color') {
@@ -775,6 +992,10 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
               el.style.padding = propValue + 'px';
             } else if ('${prop}' === 'margin') {
               el.style.margin = propValue + 'px';
+            } else if ('${prop}' === 'width') {
+              el.style.width = propValue + 'px';
+            } else if ('${prop}' === 'height') {
+              el.style.height = propValue + 'px';
             } else {
               el.setAttribute('data-' + '${prop}', propValue);
             }
@@ -783,41 +1004,74 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
           }
         `;
       } else {
-        return `window.psl_vars.${key} = ${value};`;
+        return `window.psl_vars.${key} = ${value};\n`;
       }
+    } 
+    else if (action.type === 'functionCall') {
+        const args = action.args.map(a => this.valueToJSString(a)).join(', ');
+        
+        if (action.name === 'log') {
+          return `console.log(${args});\n`;
+        }
+        if (action.name === 'alert') {
+          return `alert(${args});\n`;
+        }
+        
+        return `window.${action.name}(${args});\n`;
     }
+    else if (action.type === 'if') {
+        const cond = this.valueToJSString(action.condition); 
+        const ifBody = action.body.map(s => this.actionToJS(s, elementId)).join('');
+        let js = `if (${cond}) { ${ifBody} }`;
+
+        if (action.elseBody && action.elseBody.length > 0) {
+            const elseBody = action.elseBody.map(s => this.actionToJS(s, elementId)).join('');
+            js += ` else { ${elseBody} }`;
+        }
+        
+        return js + '\n';
+    }
+
     return '';
   }
 
-  evaluateCondition(cond) {
-    if (cond.type === 'boolean') return cond.value;
-    if (cond.type === 'variable') return window[cond.value];
-    return false;
-  }
-
   generateJavaScript() {
-    let js = `window.psl_vars = {}; window.psl_elements = {};`;
+    let js = `// Global variables initialization already done in head\n`;
     
-    // Global variables
     for (const [name, value] of Object.entries(this.ast.globalVariables)) {
-      js += `window.psl_vars.${name} = ${this.valueToJSString(value)};`;
+      js += `window.psl_vars.${name} = ${this.valueToJSString(value)};\n`;
     }
 
-    // Functions
     for (const [funcName, func] of Object.entries(this.ast.functions)) {
       const params = func.params.join(', ');
-      const body = func.body.map(stmt => this.statementToJS(stmt)).join('\n');
-      js += `window.${funcName} = function(${params}) { ${body} };`;
+      const body = func.body.map(stmt => this.statementToJS(stmt)).join('');
+      js += `window.${funcName} = function(${params}) { ${body} };\n`;
     }
 
-    // Top-level statements (if, for, etc.)
     if (this.ast.statements && this.ast.statements.length > 0) {
       for (const stmt of this.ast.statements) {
         js += this.statementToJS(stmt);
       }
     }
+    
+    if (this.ast.keyHandlers && this.ast.keyHandlers.length > 0) {
+        js += `
+document.addEventListener('keydown', function(e) {
+  const currentKey = e.key.toLowerCase();
+`;
+        for (const handler of this.ast.keyHandlers) {
+            const keyJS = this.valueToJSString(handler.key);
+            const actions = handler.actions.map(a => this.actionToJS(a, 'global')).join('');
+            js += `
+  if (currentKey === ${keyJS}.toLowerCase()) {
+    e.preventDefault(); 
+    ${actions}
+  }
+`;
+        }
+        js += `});\n`;
+    }
 
-    // Page switching
     js += `window.showPage = function(name) {
       document.querySelectorAll('[data-page]').forEach(p => p.classList.remove('active'));
       const p = document.querySelector('[data-page="' + name + '"]');
@@ -829,22 +1083,40 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
 
   statementToJS(stmt) {
     if (stmt.type === 'assignment') {
-      return `window.psl_vars.${stmt.varName} = ${this.valueToJSString(stmt.value)};`;
+      if (stmt.varName.includes('.')) {
+          return `// Element property assignment in statement context ignored\n`;
+      }
+      return `window.psl_vars.${stmt.varName} = ${this.valueToJSString(stmt.value)};\n`;
     }
     if (stmt.type === 'functionCall') {
       const args = stmt.args.map(a => this.valueToJSString(a)).join(', ');
-      return `window.${stmt.name}(${args});`;
+      
+      if (stmt.name === 'log') {
+        return `console.log(${args});\n`;
+      }
+      if (stmt.name === 'alert') {
+        return `alert(${args});\n`;
+      }
+      
+      return `window.${stmt.name}(${args});\n`;
     }
     if (stmt.type === 'if') {
-      const cond = this.valueToJSString(stmt.condition);
-      const body = stmt.body.map(s => this.statementToJS(s)).join('\n');
-      return `if (${cond}) { ${body} }`;
+      const cond = this.valueToJSString(stmt.condition); 
+      const body = stmt.body.map(s => this.statementToJS(s)).join('');
+      let js = `if (${cond}) { ${body} }`;
+
+      if (stmt.elseBody && stmt.elseBody.length > 0) {
+          const elseBody = stmt.elseBody.map(s => this.statementToJS(s)).join('');
+          js += ` else { ${elseBody} }`;
+      }
+      
+      return js + '\n';
     }
     if (stmt.type === 'for') {
       const varName = stmt.varName;
       const coll = this.valueToJSString(stmt.collection);
-      const body = stmt.body.map(s => this.statementToJS(s)).join('\n');
-      return `for (let ${varName} of ${coll}) { ${body} }`;
+      const body = stmt.body.map(s => this.statementToJS(s)).join('');
+      return `for (let ${varName} of ${coll}) { ${body} }\n`;
     }
     return '';
   }
@@ -864,6 +1136,38 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
     if (value.type === 'number') return value.value;
     if (value.type === 'boolean') return value.value ? 'true' : 'false';
     if (value.type === 'variable') return `window.psl_vars.${value.value}`;
+    if (value.type === 'dotNotation') {
+      const prop = value.property;
+      if (prop === 'text') {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.textContent : '')`;
+      } else if (prop === 'value') {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.value : '')`;
+      } else if (prop === 'src') {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.src : '')`;
+      } else if (prop === 'bg') {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.style.backgroundColor : '')`;
+      } else if (prop === 'color') {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.style.color : '')`;
+      } else if (prop === 'size') {
+        return `(window.psl_elements.${value.object} ? parseInt(window.psl_elements.${value.object}.style.fontSize) : 0)`;
+      } else if (prop === 'width') {
+        return `(window.psl_elements.${value.object} ? parseInt(window.psl_elements.${value.object}.style.width) : 0)`;
+      } else if (prop === 'height') {
+        return `(window.psl_elements.${value.object} ? parseInt(window.psl_elements.${value.object}.style.height) : 0)`;
+      } else {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.getAttribute('data-${prop}') : '')`;
+      }
+    }
+
+    if (value.type === 'binaryExpression') {
+      const leftJS = this.valueToJSString(value.left);
+      const rightJS = this.valueToJSString(value.right);
+      
+      const op = value.operator === '==' ? '===' : value.operator; 
+      
+      return `(${leftJS} ${op} ${rightJS})`;
+    }
+
     return 'null';
   }
 
@@ -892,7 +1196,7 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
 function main() {
   const args = process.argv.slice(2);
   if (args.length === 0) {
-    console.log('Usage: psl-compiler <input.psl> [--output <output.html>]');
+    console.log('Usage: node compiler.js <input.psl> [--output <output.html>]');
     process.exit(1);
   }
 
@@ -916,7 +1220,8 @@ function main() {
     
     console.log('📝 Parsing...');
     const parser = new PSLParser(tokens);
-    const ast = parser.parse();
+    const ast = parser.parse(); 
+
     console.log(`✓ AST généré`);
     
     console.log('⚙️  Compilation...');

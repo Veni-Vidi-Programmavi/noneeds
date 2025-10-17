@@ -1,21 +1,37 @@
 #name = "drfbc"
 #author = "rebd"
 
-page accueil {
-    title("Coucou") {
-        var: super;
-        bg: red;
-        color: white;
-        center: true;
-        padding: 10;
-        radius: 10;
+coucou = "salut"
 
+page accueil {
+    image("https://tse4.mm.bing.net/th/id/OIP.ROkMXuS5vrwuhw3jgi_6BQHaLH?cb=12&pid=Api&ucfimg=1") {
+        radius: 10px;
+        center;
+        height: 200px
+    }
+    title("Veuiller vous connecter") {
+        var: super;
+        center;
+    }
+    input() {
+        var: in
+        center;
     }
     button("Cliquer") {
-        var: button;
+        var: button
+        width: 100%
+        bottom;
         center;
+
         onClick {
-            super.hide;
+            if (super.text == "Coucou") {
+                super.text: "coucou est égal à salut"
+            } else {
+                super.hide;
+            }
         }
     }
+}
+onKey ("Enter") {
+    alert(in.value)
 }

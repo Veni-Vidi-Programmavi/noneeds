@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#2196F3">
     <title>drfbc</title>
+    <script>
+        window.psl_vars = {};
+        window.psl_elements = {};
+    </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; }
@@ -12,38 +16,95 @@
         [data-page].active { display: block; }
         
       body { background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; }
-      [data-page] { padding: 20px; display: flex; flex-direction: column; }
+      [data-page] { padding: 20px; display: flex !important; flex-direction: column; gap: 10px; }
       button { padding: 10px 15px; cursor: pointer; background: #2196F3; color: white; border: none; border-radius: 4px; }
       button:hover { background: #1976D2; }
       input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-      h1, h2, h3 { margin: 10px 0; }
-      p { margin: 8px 0; }
+      h1, h2, h3, p { margin: 10px 0; }
       div, h1, h2, h3, p, button, input { box-sizing: border-box; }
+      img { height: 100px; }
     
     </style>
 </head>
 <body>
     <div id="app">
-        <div data-page="accueil" class="page active"><h1 id="el_0" style="background-color: red; color: white; display: flex; padding: 10px; border-radius: 10px; flex-direction: row; justify-content: center; align-items: center">Coucou</h1><script>
-        (function() {
-          const el = document.getElementById('el_0');
-          if (!el) return;
-          window.psl_elements.super = el;
-          
-        })();
-      </script>
-<button id="el_1" style="display: flex; flex-direction: row; justify-content: center; align-items: center">Cliquer</button><script>
+        <div data-page="accueil" class="page active"><div style="display: flex; text-align: center; flex-direction: row; justify-content: center; align-items: center"><img id="el_0" src="https://tse4.mm.bing.net/th/id/OIP.ROkMXuS5vrwuhw3jgi_6BQHaLH?cb=12&pid=Api&ucfimg=1" style="border-radius: 10px; height: 200px"></img></div>
+<div style="display: flex; text-align: center; flex-direction: row; justify-content: center; align-items: center"><h1 id="el_1">Veuiller vous connecter</h1></div><script>
         (function() {
           const el = document.getElementById('el_1');
           if (!el) return;
+          window.psl_elements.super = el;
+          
+          
+        })();
+      </script>
+<div style="display: flex; text-align: center; flex-direction: row; justify-content: center; align-items: center"><input id="el_2"></input></div><script>
+        (function() {
+          const el = document.getElementById('el_2');
+          if (!el) return;
+          window.psl_elements.in = el;
+          
+          
+        })();
+      </script>
+<div style="display: flex; text-align: center; flex-direction: column; justify-content: center; align-items: center"><button id="el_3" style="width: 100%">Cliquer</button></div><script>
+        (function() {
+          const el = document.getElementById('el_3');
+          if (!el) return;
           window.psl_elements.button = el;
-          el.addEventListener('click', function() { 
+          
+          el.addEventListener('click', function() { if (((window.psl_elements.super ? window.psl_elements.super.textContent : '') === "Coucou")) { 
+          if (window.psl_elements && window.psl_elements['super']) {
+            const el = window.psl_elements['super'];
+            const propValue = "coucou est égal à salut";
+            console.log('Modifying super.text to', propValue);
+            if ('text' === 'text') {
+              el.textContent = propValue;
+            } else if ('text' === 'value') {
+              el.value = propValue;
+            } else if ('text' === 'src') {
+              el.src = propValue;
+            } else if ('text' === 'bg') {
+              el.style.backgroundColor = propValue;
+            } else if ('text' === 'color') {
+              el.style.color = propValue;
+            } else if ('text' === 'size') {
+              el.style.fontSize = propValue + 'px';
+            } else if ('text' === 'hide') {
+              el.style.display = (propValue === true || propValue === 1 || propValue === '1') ? 'none' : 'block';
+            } else if ('text' === 'show') {
+              el.style.display = (propValue === false || propValue === 0 || propValue === '0') ? 'none' : 'block';
+            } else if ('text' === 'radius') {
+              el.style.borderRadius = propValue + 'px';
+            } else if ('text' === 'border-size') {
+              el.style.borderWidth = propValue + 'px';
+            } else if ('text' === 'border-color') {
+              el.style.borderColor = propValue;
+            } else if ('text' === 'padding') {
+              el.style.padding = propValue + 'px';
+            } else if ('text' === 'margin') {
+              el.style.margin = propValue + 'px';
+            } else if ('text' === 'width') {
+              el.style.width = propValue + 'px';
+            } else if ('text' === 'height') {
+              el.style.height = propValue + 'px';
+            } else {
+              el.setAttribute('data-' + 'text', propValue);
+            }
+          } else {
+            console.warn('Element super not found in psl_elements');
+          }
+         } else { 
           if (window.psl_elements && window.psl_elements['super']) {
             const el = window.psl_elements['super'];
             const propValue = true;
             console.log('Modifying super.hide to', propValue);
             if ('hide' === 'text') {
               el.textContent = propValue;
+            } else if ('hide' === 'value') {
+              el.value = propValue;
+            } else if ('hide' === 'src') {
+              el.src = propValue;
             } else if ('hide' === 'bg') {
               el.style.backgroundColor = propValue;
             } else if ('hide' === 'color') {
@@ -64,23 +125,40 @@
               el.style.padding = propValue + 'px';
             } else if ('hide' === 'margin') {
               el.style.margin = propValue + 'px';
+            } else if ('hide' === 'width') {
+              el.style.width = propValue + 'px';
+            } else if ('hide' === 'height') {
+              el.style.height = propValue + 'px';
             } else {
               el.setAttribute('data-' + 'hide', propValue);
             }
           } else {
             console.warn('Element super not found in psl_elements');
           }
-         });
+         }
+ });
         })();
       </script></div>
     </div>
     <script>
-        window.psl_vars = {}; window.psl_elements = {};window.showPage = function(name) {
+        // Global variables initialization already done in head
+window.psl_vars.coucou = "salut";
+
+document.addEventListener('keydown', function(e) {
+  const currentKey = e.key.toLowerCase();
+
+  if (currentKey === "Enter".toLowerCase()) {
+    e.preventDefault(); 
+    alert((window.psl_elements.in ? window.psl_elements.in.value : ''));
+
+  }
+});
+window.showPage = function(name) {
       document.querySelectorAll('[data-page]').forEach(p => p.classList.remove('active'));
       const p = document.querySelector('[data-page="' + name + '"]');
       if (p) p.classList.add('active');
     };
-        if ('serviceWorker' in navigator) {
+        if ('serviceWorker' in navigator && location.protocol === 'https:') {
             navigator.serviceWorker.register(
                 'data:application/javascript;base64,c2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiBlLndhaXRVbnRpbChzZWxmLnNraXBXYWl0aW5nKCkpKTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdhY3RpdmF0ZScsIGUgPT4gZS53YWl0VW50aWwoc2VsZi5jbGllbnRzLmNsYWltKCkpKTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGUgPT4gZS5yZXNwb25kV2l0aChmZXRjaChlLnJlcXVlc3QpLmNhdGNoKCgpID0+IG5ldyBSZXNwb25zZSgnT2ZmbGluZScpKSkpOw==',
                 { scope: '/' }
