@@ -313,6 +313,8 @@ class PSLParser {
       directText = this.parseExpression();
       if (elementName === 'image') {
         props.src = directText;
+      } else if (elementName === 'input') {
+        props.placeholder = directText;
       } else {
         props.text = directText;
       }
@@ -731,14 +733,14 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
 
   generateCSS() {
     return `
-      body { background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+      body { background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; user-select: none; }
       [data-page] { padding: 20px; display: flex !important; flex-direction: column; gap: 10px; }
       button { padding: 10px 15px; cursor: pointer; background: #2196F3; color: white; border: none; border-radius: 4px; }
       button:hover { background: #1976D2; }
       input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
       h1, h2, h3, p { margin: 10px 0; }
       div, h1, h2, h3, p, button, input { box-sizing: border-box; }
-      img { height: 100px; }
+      img { height: 50px; }
     `;
   }
 
@@ -784,6 +786,7 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
     let wrapperStyles = [];
     let justifyContent = null;
     let alignItems = null;
+    let textAlign = null;
     let flexDirection = 'row';
 
     for (const [key, value] of Object.entries(el.props)) {
@@ -793,6 +796,7 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
         needsWrapper = true;
         justifyContent = 'center';
         alignItems = 'center';
+        textAlign = "center";
       } else if (key === 'left') {
         needsWrapper = true;
         justifyContent = 'flex-start';
@@ -837,6 +841,8 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
         // Text will be added after opening tag
       } else if (key === 'src') {
         html += ` src="${strValue}"`;
+      } else if (key === 'placeholder') {
+        html += ` placeholder="${strValue}"`;
       } else if (key === 'var') {
         elementVarName = strValue;
       } else if (key === 'size') {

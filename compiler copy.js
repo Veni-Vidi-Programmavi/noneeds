@@ -52,6 +52,8 @@ class PSLTokenizer {
       } else if ('{}()[];:,=.'.includes(char)) {
         this.tokens.push({ type: 'SYMBOL', value: char });
         this.pos++;
+      } else if (char === '%') {
+        this.pos++;
       } else {
         this.pos++;
       }
@@ -102,6 +104,21 @@ class PSLTokenizer {
       value += this.input[this.pos];
       this.pos++;
     }
+    
+    const unitStart = this.pos;
+    let unit = '';
+    while (this.pos < this.input.length && /[a-zA-Z%]/.test(this.input[this.pos])) {
+      unit += this.input[this.pos];
+      this.pos++;
+    }
+    
+    const validUnits = ['px', 'vw', 'vh', '%', 'em', 'rem', 'vmin', 'vmax', 'cm', 'mm', 'in', 'pt', 'pc'];
+    if (validUnits.includes(unit.toLowerCase()) || unit === '%') {
+      value += unit;
+    } else {
+      this.pos = unitStart;
+    }
+    
     this.tokens.push({ type: 'NUMBER', value });
   }
 
@@ -207,7 +224,6 @@ class PSLParser {
     return { type: 'keyHandler', key: keyExpression, actions };
   }
 
-
   parseFor() {
     this.expect('IDENTIFIER'); 
     this.expect('SYMBOL', '(');
@@ -265,7 +281,6 @@ class PSLParser {
     return { elements };
   }
 
-  // HELPER : pour parser un bloc d'éléments (enfants)
   parseElementBlock() {
       const elements = [];
       while (this.peek().value !== '}' && !this.isAtEnd()) {
@@ -276,7 +291,6 @@ class PSLParser {
       }
       return elements;
   }
-
 
   parseTopLevelElement() {
     if (this.peek().type !== 'IDENTIFIER') return null;
@@ -297,7 +311,13 @@ class PSLParser {
     
     if (this.peek().type === 'STRING') {
       directText = this.parseExpression();
-      props.text = directText;
+      if (elementName === 'image') {
+        props.src = directText;
+      } else if (elementName === 'input') {
+        props.placeholder = directText;
+      } else {
+        props.text = directText;
+      }
     }
     
     this.expect('SYMBOL', ')');
@@ -318,7 +338,6 @@ class PSLParser {
           const eventName = this.expect('IDENTIFIER').value;
           handlers.push(this.parseEventHandler(eventName));
         }
-        // Gestion complète des éléments structurels IF/ELSE
         else if (token.value === 'if' && nextToken.value === '(') {
           this.pos++; 
 
@@ -331,7 +350,7 @@ class PSLParser {
 
           let elseChildren = null;
           if (this.peek().value === 'else') {
-              this.pos++; // Consume 'else'
+              this.pos++;
               this.expect('SYMBOL', '{');
               elseChildren = this.parseElementBlock();
               this.expect('SYMBOL', '}');
@@ -397,7 +416,6 @@ class PSLParser {
     return props;
   }
 
-  // Ajout de la gestion de l'instruction 'if' et de l'affectation implicite sans ; ou :
   parseEventHandlerBody() {
     const actions = [];
     
@@ -408,16 +426,14 @@ class PSLParser {
       const token = this.peek();
       const next = this.peekAhead(1);
       
-      // 1. Prioriser l'instruction IF 
       if (token.value === 'if' && next.value === '(') {
-        actions.push(this.parseIf());
+        actions.push(this.parseIfAction());
         continue; 
       }
       
       if (token.type === 'IDENTIFIER') {
         const name = token.value;
         
-        // 2. Appel de fonction (ex: log("message"))
         if (next.value === '(') {
             this.pos++; 
             this.expect('SYMBOL', '(');
@@ -432,13 +448,11 @@ class PSLParser {
             continue;
         }
         
-        // 3. Check for element.property: value or element.property;
         if (next.value === '.' && this.peekAhead(2).type === 'IDENTIFIER') {
           const elemName = this.expect('IDENTIFIER').value;
           this.expect('SYMBOL', '.');
           const propName = this.expect('IDENTIFIER').value;
           
-          // With value: element.property: value;
           if (this.peek().value === ':') {
             this.pos++;
             const value = this.parseExpression();
@@ -448,7 +462,6 @@ class PSLParser {
               value 
             });
           }
-          // Boolean flag: element.property; (avec point-virgule)
           else if (this.peek().value === ';') {
             this.pos++;
             actions.push({ 
@@ -457,7 +470,6 @@ class PSLParser {
               value: { type: 'boolean', value: true }
             });
           }
-          // Boolean flag implicite (sans symbole, comme super.hide)
           else {
              actions.push({ 
               type: 'assignment', 
@@ -467,7 +479,6 @@ class PSLParser {
           }
           continue;
         }
-        // 4. Regular assignment: key: value;
         else if (next.value === ':') {
           const key = this.expect('IDENTIFIER').value;
           this.expect('SYMBOL', ':');
@@ -476,7 +487,6 @@ class PSLParser {
           if (this.peek().value === ';') this.pos++;
           continue;
         }
-        // 5. Boolean flag: key;
         else if (next.value === ';') {
           const key = this.expect('IDENTIFIER').value;
           this.expect('SYMBOL', ';');
@@ -501,7 +511,6 @@ class PSLParser {
     return { event: eventName, actions };
   }
 
-  // Mise à jour de parseBlock pour l'affectation implicite
   parseBlock() {
     const statements = [];
     
@@ -509,11 +518,9 @@ class PSLParser {
       this.skipWhitespace();
       if (this.peek().value === '}') break;
       
-      // 1. Prioriser l'instruction 'if'
       if (this.peek().value === 'if') {
-        statements.push(this.parseIf());
+        statements.push(this.parseIfStatement());
       } 
-      // 2. Traiter les appels de fonction
       else if (this.peek().type === 'IDENTIFIER' && this.peekAhead(1).value === '(') {
         const funcName = this.expect('IDENTIFIER').value;
         this.expect('SYMBOL', '(');
@@ -526,7 +533,6 @@ class PSLParser {
         statements.push({ type: 'functionCall', name: funcName, args });
         if (this.peek().value === ';') this.pos++;
       } 
-      // 3. Traiter les assignations avec '='
       else if (this.peek().type === 'IDENTIFIER' && this.peekAhead(1).value === '=') {
         const varName = this.expect('IDENTIFIER').value;
         this.expect('SYMBOL', '=');
@@ -534,7 +540,6 @@ class PSLParser {
         statements.push({ type: 'assignment', varName, value });
         if (this.peek().value === ';') this.pos++;
       } 
-      // 4. Traiter les booléens implicites avec ';' (par exemple: super;)
       else if (this.peek().type === 'IDENTIFIER' && this.peekAhead(1).value === ';') {
         const varName = this.expect('IDENTIFIER').value;
         this.expect('SYMBOL', ';');
@@ -548,21 +553,18 @@ class PSLParser {
     return statements;
   }
 
-  // Gestion complète de l'instruction IF/ELSE pour les actions et les statements
-  parseIf() {
+  parseIfAction() {
     this.expect('IDENTIFIER', 'if'); 
     this.expect('SYMBOL', '(');
     const condition = this.parseExpression();
     this.expect('SYMBOL', ')');
     this.expect('SYMBOL', '{');
-    // NOTE: parseEventHandlerBody est utilisé ici car il gère les actions d'éléments (element.prop: value)
-    // même s'il est appelé depuis parseBlock (pour les fonctions) ou parseEventHandlerBody (pour les handlers).
     const body = this.parseEventHandlerBody(); 
     this.expect('SYMBOL', '}');
 
     let elseBody = null;
     if (this.peek().value === 'else') {
-        this.pos++; // Consume 'else'
+        this.pos++;
         this.expect('SYMBOL', '{');
         elseBody = this.parseEventHandlerBody(); 
         this.expect('SYMBOL', '}');
@@ -571,7 +573,26 @@ class PSLParser {
     return { type: 'if', condition, body, elseBody };
   }
 
-  // Gère les expressions de comparaison
+  parseIfStatement() {
+    this.expect('IDENTIFIER', 'if'); 
+    this.expect('SYMBOL', '(');
+    const condition = this.parseExpression();
+    this.expect('SYMBOL', ')');
+    this.expect('SYMBOL', '{');
+    const body = this.parseBlock(); 
+    this.expect('SYMBOL', '}');
+
+    let elseBody = null;
+    if (this.peek().value === 'else') {
+        this.pos++;
+        this.expect('SYMBOL', '{');
+        elseBody = this.parseBlock(); 
+        this.expect('SYMBOL', '}');
+    }
+    
+    return { type: 'if', condition, body, elseBody };
+  }
+
   parseExpression() {
     let left = this.parsePrimary();
 
@@ -592,7 +613,6 @@ class PSLParser {
     return left;
   }
 
-  // parsePrimary pour lire les valeurs de base
   parsePrimary() {
     const token = this.peek();
     
@@ -613,7 +633,6 @@ class PSLParser {
       
       this.pos++;
       
-      // Check for dot notation (element.property or variable.property)
       if (this.peek().value === '.') {
         this.pos++;
         const property = this.expect('IDENTIFIER').value;
@@ -625,7 +644,6 @@ class PSLParser {
     
     return { type: 'null', value: null };
   }
-
 
   skipWhitespace() {
     while (this.pos < this.tokens.length && /\s/.test(this.tokens[this.pos].value || '')) {
@@ -679,7 +697,6 @@ class PSLCompiler {
     <meta name="theme-color" content="#2196F3">
     <title>${this.getMetadata('name') || 'App'}</title>
     <script>
-        // Initialize global objects FIRST
         window.psl_vars = {};
         window.psl_elements = {};
     </script>
@@ -716,13 +733,14 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
 
   generateCSS() {
     return `
-      body { background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; }
-      [data-page] { padding: 20px; display: flex; flex-direction: column; }
+      body { background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; user-select: none; }
+      [data-page] { padding: 20px; display: flex !important; flex-direction: column; gap: 10px; }
       button { padding: 10px 15px; cursor: pointer; background: #2196F3; color: white; border: none; border-radius: 4px; }
       button:hover { background: #1976D2; }
       input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
       h1, h2, h3, p { margin: 10px 0; }
       div, h1, h2, h3, p, button, input { box-sizing: border-box; }
+      img { height: 50px; }
     `;
   }
 
@@ -743,12 +761,18 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
 
   getStyleValue(key, strValue) {
       if (['width', 'height', 'size', 'border-size', 'padding', 'margin', 'gap', 'radius'].includes(key)) {
-          // Check if the value contains a unit (vw, vh, %, etc.)
-          if (/[a-zA-Z%]$/.test(strValue)) {
-              return strValue;
+          const trimmed = String(strValue).trim();
+          
+          if (/\d+\.?\d*(px|vw|vh|%|em|rem|vmin|vmax|cm|mm|in|pt|pc)\s*$/i.test(trimmed) || trimmed.includes('%')) {
+              return trimmed;
           }
-          // Default to 'px' if only a number is provided
-          return `${strValue}px`;
+          
+          const numValue = parseFloat(trimmed);
+          if (!isNaN(numValue) && /^\d+\.?\d*$/.test(trimmed)) {
+              return `${trimmed}px`;
+          }
+          
+          return trimmed;
       }
       return strValue;
   }
@@ -756,19 +780,69 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
   generateElement(el, pageName) {
     const tag = this.getElementTag(el.name);
     const id = `el_${this.elementId++}`;
-    let html = `<${tag} id="${id}"`;
-
-    let styles = [];
-    let hasPositioning = false;
+    
+    // Check if we need a positioning wrapper
+    let needsWrapper = false;
+    let wrapperStyles = [];
     let justifyContent = null;
     let alignItems = null;
+    let textAlign = null;
     let flexDirection = 'row';
+
+    for (const [key, value] of Object.entries(el.props)) {
+      const strValue = this.valueToString(value);
+      
+      if (key === 'center' && (strValue === 'true' || strValue === '1')) {
+        needsWrapper = true;
+        justifyContent = 'center';
+        alignItems = 'center';
+        textAlign = "center";
+      } else if (key === 'left') {
+        needsWrapper = true;
+        justifyContent = 'flex-start';
+      } else if (key === 'right') {
+        needsWrapper = true;
+        justifyContent = 'flex-end';
+      } else if (key === 'top') {
+        needsWrapper = true;
+        flexDirection = 'column';
+        alignItems = 'flex-start';
+      } else if (key === 'bottom') {
+        needsWrapper = true;
+        flexDirection = 'column';
+        alignItems = 'flex-end';
+      }
+    }
+
+    // Build wrapper if needed
+    let wrapperOpen = '';
+    let wrapperClose = '';
+    
+    if (needsWrapper) {
+      wrapperStyles.push(`display: flex`);
+      wrapperStyles.push(`text-align: center`);
+      wrapperStyles.push(`flex-direction: ${flexDirection}`);
+      if (justifyContent) wrapperStyles.push(`justify-content: ${justifyContent}`);
+      if (alignItems) wrapperStyles.push(`align-items: ${alignItems}`);
+      
+      wrapperOpen = `<div style="${wrapperStyles.join('; ')}">`;
+      wrapperClose = `</div>`;
+    }
+
+    let html = `${wrapperOpen}<${tag} id="${id}"`;
+
+    let styles = [];
     let elementVarName = null;
 
     for (const [key, value] of Object.entries(el.props)) {
       const strValue = this.valueToString(value);
       
       if (key === 'text') {
+        // Text will be added after opening tag
+      } else if (key === 'src') {
+        html += ` src="${strValue}"`;
+      } else if (key === 'placeholder') {
+        html += ` placeholder="${strValue}"`;
       } else if (key === 'var') {
         elementVarName = strValue;
       } else if (key === 'size') {
@@ -794,32 +868,8 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
         if (strValue === 'true' || strValue === '1') {
           styles.push(`display: none`);
         }
-      }
-      else if (key === 'center') {
-        if (strValue === 'true' || strValue === '1') {
-          hasPositioning = true;
-          justifyContent = 'center';
-          alignItems = 'center';
-          styles.push(`display: flex`);
-        }
-      } else if (key === 'left') {
-        hasPositioning = true;
-        justifyContent = 'flex-start';
-        styles.push(`display: flex`);
-      } else if (key === 'right') {
-        hasPositioning = true;
-        justifyContent = 'flex-end';
-        styles.push(`display: flex`);
-      } else if (key === 'top') {
-        hasPositioning = true;
-        flexDirection = 'column';
-        alignItems = 'flex-start';
-        styles.push(`display: flex`);
-      } else if (key === 'bottom') {
-        hasPositioning = true;
-        flexDirection = 'column';
-        alignItems = 'flex-end';
-        styles.push(`display: flex`);
+      } else if (key === 'center' || key === 'left' || key === 'right' || key === 'top' || key === 'bottom') {
+        // Skip these as they're handled by the wrapper
       } else if (key === 'width') {
         styles.push(`width: ${this.getStyleValue(key, strValue)}`);
       } else if (key === 'height') {
@@ -835,64 +885,50 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
       }
     }
 
-    if (hasPositioning) {
-      styles.push(`flex-direction: ${flexDirection}`);
-      if (justifyContent) styles.push(`justify-content: ${justifyContent}`);
-      if (alignItems) styles.push(`align-items: ${alignItems}`);
-    }
-
     if (styles.length > 0) {
       html += ` style="${styles.join('; ')}"`;
     }
 
     html += `>`;
 
-    if (el.props && el.props.text) {
+    if (el.props && el.props.text && tag !== 'img') {
       html += this.valueToString(el.props.text);
     }
 
     if (el.children && el.children.length > 0) {
       for (const child of el.children) {
-        // CORRIGÉ: Utilisation de la visibilité dynamique au lieu de document.write
         if (child.type === 'if') {
           const condJS = this.valueToJSString(child.condition);
           const ifBlockId = `if_block_${this.elementId++}`;
-          const elseBlockId = `else_block_${this.elementId++}`;
+          const elseBlockId = child.elseChildren && child.elseChildren.length > 0 ? `else_block_${this.elementId++}` : null;
 
-          // --- 1. Rendu du bloc IF (initialement masqué) ---
           const ifChildrenHTML = child.children.map(c => this.generateElement(c, pageName)).join('');
-          // Utilisation d'un conteneur div avec des marges nulles pour ne pas perturber la mise en page
-          html += `<div id="${ifBlockId}" class="psl-if-block" style="display: none; margin-top: 0; margin-bottom: 0;">\n${ifChildrenHTML}\n</div>`;
+          html += `<div id="${ifBlockId}" class="psl-if-block" style="display: none; margin: 0;">\n${ifChildrenHTML}\n</div>`;
 
-          // --- 2. Rendu du bloc ELSE (initialement masqué, si présent) ---
-          let elseBlockHtml = '';
-          if (child.elseChildren && child.elseChildren.length > 0) {
+          if (elseBlockId) {
               const elseChildrenHTML = child.elseChildren.map(c => this.generateElement(c, pageName)).join('');
-              elseBlockHtml = `<div id="${elseBlockId}" class="psl-else-block" style="display: none; margin-top: 0; margin-bottom: 0;">\n${elseChildrenHTML}\n</div>`;
-              html += elseBlockHtml;
+              html += `<div id="${elseBlockId}" class="psl-else-block" style="display: none; margin: 0;">\n${elseChildrenHTML}\n</div>`;
           }
           
-          // --- 3. Ajout du script pour vérifier la condition et définir la visibilité ---
-          // Ce script s'exécute à l'initialisation du DOM.
           let scriptContent = `
-            const ifEl = document.getElementById('${ifBlockId}');
-            ${child.elseChildren && child.elseChildren.length > 0 ? `const elseEl = document.getElementById('${elseBlockId}');` : ''}
-            
-            // Fonction pour évaluer et mettre à jour l'affichage
-            function updateConditionalDisplay() {
-                if (${condJS}) {
-                    if (ifEl) ifEl.style.display = 'block';
-                    ${child.elseChildren && child.elseChildren.length > 0 ? `if (elseEl) elseEl.style.display = 'none';` : ''}
-                } else {
-                    if (ifEl) ifEl.style.display = 'none';
-                    ${child.elseChildren && child.elseChildren.length > 0 ? `if (elseEl) elseEl.style.display = 'block';` : ''}
-                }
-            }
-            updateConditionalDisplay();
-            // TODO: (Amélioration future) Ajouter un observateur de variables pour la réactivité
+            (function() {
+              const ifEl = document.getElementById('${ifBlockId}');
+              ${elseBlockId ? `const elseEl = document.getElementById('${elseBlockId}');` : ''}
+              
+              function updateConditionalDisplay() {
+                  if (${condJS}) {
+                      if (ifEl) ifEl.style.display = 'block';
+                      ${elseBlockId ? `if (elseEl) elseEl.style.display = 'none';` : ''}
+                  } else {
+                      if (ifEl) ifEl.style.display = 'none';
+                      ${elseBlockId ? `if (elseEl) elseEl.style.display = 'block';` : ''}
+                  }
+              }
+              updateConditionalDisplay();
+            })();
           `;
 
-          html += `<script>(function() { ${scriptContent} })();</script>`;
+          html += `<script>${scriptContent}</script>`;
 
         } else {
           html += this.generateElement(child, pageName);
@@ -900,7 +936,7 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
       }
     }
 
-    html += `</${tag}>`;
+    html += `</${tag}>${wrapperClose}`;
 
     let handlerCode = '';
     
@@ -924,7 +960,6 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
     return html;
   }
 
-  // Correction: La logique IF pour les actions est déplacée ici (depuis statementToJS)
   actionToJS(action, elementId) {
     if (action.type === 'assignment') {
       const key = action.key;
@@ -939,6 +974,10 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
             console.log('Modifying ${elemName}.${prop} to', propValue);
             if ('${prop}' === 'text') {
               el.textContent = propValue;
+            } else if ('${prop}' === 'value') {
+              el.value = propValue;
+            } else if ('${prop}' === 'src') {
+              el.src = propValue;
             } else if ('${prop}' === 'bg') {
               el.style.backgroundColor = propValue;
             } else if ('${prop}' === 'color') {
@@ -959,6 +998,10 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
               el.style.padding = propValue + 'px';
             } else if ('${prop}' === 'margin') {
               el.style.margin = propValue + 'px';
+            } else if ('${prop}' === 'width') {
+              el.style.width = propValue + 'px';
+            } else if ('${prop}' === 'height') {
+              el.style.height = propValue + 'px';
             } else {
               el.setAttribute('data-' + '${prop}', propValue);
             }
@@ -970,7 +1013,6 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
         return `window.psl_vars.${key} = ${value};\n`;
       }
     } 
-    // GESTION DES APPELS DE FONCTION (log, alert, custom)
     else if (action.type === 'functionCall') {
         const args = action.args.map(a => this.valueToJSString(a)).join(', ');
         
@@ -983,15 +1025,12 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
         
         return `window.${action.name}(${args});\n`;
     }
-    // Gestion des instructions IF dans les actions (appel récursif)
     else if (action.type === 'if') {
         const cond = this.valueToJSString(action.condition); 
-        // Compilation du corps IF en utilisant actionToJS
         const ifBody = action.body.map(s => this.actionToJS(s, elementId)).join('');
         let js = `if (${cond}) { ${ifBody} }`;
 
         if (action.elseBody && action.elseBody.length > 0) {
-            // Compilation du corps ELSE en utilisant actionToJS
             const elseBody = action.elseBody.map(s => this.actionToJS(s, elementId)).join('');
             js += ` else { ${elseBody} }`;
         }
@@ -1002,32 +1041,25 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
     return '';
   }
 
-
   generateJavaScript() {
     let js = `// Global variables initialization already done in head\n`;
     
-    // Global variables
     for (const [name, value] of Object.entries(this.ast.globalVariables)) {
       js += `window.psl_vars.${name} = ${this.valueToJSString(value)};\n`;
     }
 
-    // Functions
     for (const [funcName, func] of Object.entries(this.ast.functions)) {
       const params = func.params.join(', ');
-      // Correction: Utiliser actionToJS pour le corps des fonctions si nécessaire, mais ici
-      // on suppose que les fonctions sont composées de statements (affectations de variables globales et appels de fonctions).
       const body = func.body.map(stmt => this.statementToJS(stmt)).join('');
       js += `window.${funcName} = function(${params}) { ${body} };\n`;
     }
 
-    // Top-level statements (if, for, etc.)
     if (this.ast.statements && this.ast.statements.length > 0) {
       for (const stmt of this.ast.statements) {
         js += this.statementToJS(stmt);
       }
     }
     
-    // Gestion des handlers de touche globaux
     if (this.ast.keyHandlers && this.ast.keyHandlers.length > 0) {
         js += `
 document.addEventListener('keydown', function(e) {
@@ -1046,8 +1078,6 @@ document.addEventListener('keydown', function(e) {
         js += `});\n`;
     }
 
-
-    // Page switching
     js += `window.showPage = function(name) {
       document.querySelectorAll('[data-page]').forEach(p => p.classList.remove('active'));
       const p = document.querySelector('[data-page="' + name + '"]');
@@ -1057,10 +1087,8 @@ document.addEventListener('keydown', function(e) {
     return js;
   }
 
-  // Génération du code JavaScript pour les statements (inclut le IF/ELSE au niveau global)
   statementToJS(stmt) {
     if (stmt.type === 'assignment') {
-      // Pour les affectations de variables globales (pas les éléments)
       if (stmt.varName.includes('.')) {
           return `// Element property assignment in statement context ignored\n`;
       }
@@ -1078,10 +1106,8 @@ document.addEventListener('keydown', function(e) {
       
       return `window.${stmt.name}(${args});\n`;
     }
-    // NOTE: Le traitement des IF statements globaux est différent du traitement IF dans les actions d'éléments
     if (stmt.type === 'if') {
       const cond = this.valueToJSString(stmt.condition); 
-      // Si le IF vient d'un statement (fonction ou global), on utilise statementToJS.
       const body = stmt.body.map(s => this.statementToJS(s)).join('');
       let js = `if (${cond}) { ${body} }`;
 
@@ -1110,7 +1136,6 @@ document.addEventListener('keydown', function(e) {
     return '';
   }
 
-  // Gère les expressions binaires
   valueToJSString(value) {
     if (!value) return 'null';
     if (value.type === 'string') return `"${value.value.replace(/"/g, '\\"')}"`;
@@ -1118,7 +1143,26 @@ document.addEventListener('keydown', function(e) {
     if (value.type === 'boolean') return value.value ? 'true' : 'false';
     if (value.type === 'variable') return `window.psl_vars.${value.value}`;
     if (value.type === 'dotNotation') {
-      return `window.psl_elements.${value.object}.${value.property}`;
+      const prop = value.property;
+      if (prop === 'text') {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.textContent : '')`;
+      } else if (prop === 'value') {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.value : '')`;
+      } else if (prop === 'src') {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.src : '')`;
+      } else if (prop === 'bg') {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.style.backgroundColor : '')`;
+      } else if (prop === 'color') {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.style.color : '')`;
+      } else if (prop === 'size') {
+        return `(window.psl_elements.${value.object} ? parseInt(window.psl_elements.${value.object}.style.fontSize) : 0)`;
+      } else if (prop === 'width') {
+        return `(window.psl_elements.${value.object} ? parseInt(window.psl_elements.${value.object}.style.width) : 0)`;
+      } else if (prop === 'height') {
+        return `(window.psl_elements.${value.object} ? parseInt(window.psl_elements.${value.object}.style.height) : 0)`;
+      } else {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.getAttribute('data-${prop}') : '')`;
+      }
     }
 
     if (value.type === 'binaryExpression') {

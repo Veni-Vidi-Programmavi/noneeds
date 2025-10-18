@@ -13,7 +13,7 @@ page accueil {
         var: super;
         center;
     }
-    input() {
+    input("Entrer votre ID") {
         var: in
         center;
     }
