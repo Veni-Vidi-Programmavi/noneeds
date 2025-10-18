@@ -14,20 +14,23 @@ page accueil {
         center;
     }
     input("Entrer votre ID") {
-        var: in
+        var: in;
         center;
     }
     button("Cliquer") {
-        var: button
-        width: 100%
-        bottom;
+        var: button;
         center;
+        width: 50%;
+        base: bottom;
 
         onClick {
-            if (super.text == "Coucou") {
-                super.text: "coucou est égal à salut"
+            if (in.value == "coucou") {
+                wait(2000) {
+                    super.text: "Connecté";
+                    super.color: green;
+                }
             } else {
-                super.hide;
+                accueil.hide
             }
         }
     }

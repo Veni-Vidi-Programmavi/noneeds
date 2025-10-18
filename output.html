@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#2196F3">
     <title>drfbc</title>
     <script>
@@ -15,21 +15,23 @@
         [data-page] { display: none; }
         [data-page].active { display: block; }
         
-      body { background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; user-select: none; }
-      [data-page] { padding: 20px; display: flex !important; flex-direction: column; gap: 10px; }
+      body { background: #f5f5f5; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+      [data-page] { padding: 20px; display: flex; flex-direction: column; position: relative; min-height: 100vh; }
       button { padding: 10px 15px; cursor: pointer; background: #2196F3; color: white; border: none; border-radius: 4px; }
       button:hover { background: #1976D2; }
       input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
       h1, h2, h3, p { margin: 10px 0; }
       div, h1, h2, h3, p, button, input { box-sizing: border-box; }
-      img { height: 50px; }
+      img { height: 50px; user-select: none; -webkit-user-drag: none; -webkit-user-select: none; pointer-events: auto; }
+      * { user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }
+      input, textarea { user-select: text; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; }
     
     </style>
 </head>
 <body>
     <div id="app">
-        <div data-page="accueil" class="page active"><div style="display: flex; text-align: center; flex-direction: row; justify-content: center; align-items: center"><img id="el_0" src="https://tse4.mm.bing.net/th/id/OIP.ROkMXuS5vrwuhw3jgi_6BQHaLH?cb=12&pid=Api&ucfimg=1" style="border-radius: 10px; height: 200px"></img></div>
-<div style="display: flex; text-align: center; flex-direction: row; justify-content: center; align-items: center"><h1 id="el_1">Veuiller vous connecter</h1></div><script>
+        <div data-page="accueil" data-padding="20px" class="page active" style="padding: 20px; "><div style="display: flex; justify-content: center; align-items: center"><img id="el_0" src="https://tse4.mm.bing.net/th/id/OIP.ROkMXuS5vrwuhw3jgi_6BQHaLH?cb=12&pid=Api&ucfimg=1" style="border-radius: 10px; height: 200px"></img></div>
+<div style="display: flex; justify-content: center; align-items: center"><h1 id="el_1">Veuiller vous connecter</h1></div><script>
         (function() {
           const el = document.getElementById('el_1');
           if (!el) return;
@@ -38,7 +40,7 @@
           
         })();
       </script>
-<div style="display: flex; text-align: center; flex-direction: row; justify-content: center; align-items: center"><input id="el_2" placeholder="Entrer votre ID"></input></div><script>
+<div style="display: flex; justify-content: center; align-items: center"><input id="el_2" placeholder="Entrer votre ID"></input></div><script>
         (function() {
           const el = document.getElementById('el_2');
           if (!el) return;
@@ -47,16 +49,16 @@
           
         })();
       </script>
-<div style="display: flex; text-align: center; flex-direction: column; justify-content: center; align-items: center"><button id="el_3" style="width: 100%">Cliquer</button></div><script>
+<button id="el_3" style="width: 50%; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%)">Cliquer</button><script>
         (function() {
           const el = document.getElementById('el_3');
           if (!el) return;
           window.psl_elements.button = el;
           
-          el.addEventListener('click', function() { if (((window.psl_elements.super ? window.psl_elements.super.textContent : '') === "Coucou")) { 
+          el.addEventListener('click', async function() { if (((window.psl_elements.in ? window.psl_elements.in.value : '') === "coucou")) { await new Promise(resolve => setTimeout(resolve, 2000)); 
           if (window.psl_elements && window.psl_elements['super']) {
             const el = window.psl_elements['super'];
-            const propValue = "coucou est égal à salut";
+            const propValue = "Connecté";
             console.log('Modifying super.text to', propValue);
             if ('text' === 'text') {
               el.textContent = propValue;
@@ -94,48 +96,54 @@
           } else {
             console.warn('Element super not found in psl_elements');
           }
-         } else { 
+        
           if (window.psl_elements && window.psl_elements['super']) {
             const el = window.psl_elements['super'];
-            const propValue = true;
-            console.log('Modifying super.hide to', propValue);
-            if ('hide' === 'text') {
+            const propValue = "green";
+            console.log('Modifying super.color to', propValue);
+            if ('color' === 'text') {
               el.textContent = propValue;
-            } else if ('hide' === 'value') {
+            } else if ('color' === 'value') {
               el.value = propValue;
-            } else if ('hide' === 'src') {
+            } else if ('color' === 'src') {
               el.src = propValue;
-            } else if ('hide' === 'bg') {
+            } else if ('color' === 'bg') {
               el.style.backgroundColor = propValue;
-            } else if ('hide' === 'color') {
+            } else if ('color' === 'color') {
               el.style.color = propValue;
-            } else if ('hide' === 'size') {
+            } else if ('color' === 'size') {
               el.style.fontSize = propValue + 'px';
-            } else if ('hide' === 'hide') {
+            } else if ('color' === 'hide') {
               el.style.display = (propValue === true || propValue === 1 || propValue === '1') ? 'none' : 'block';
-            } else if ('hide' === 'show') {
+            } else if ('color' === 'show') {
               el.style.display = (propValue === false || propValue === 0 || propValue === '0') ? 'none' : 'block';
-            } else if ('hide' === 'radius') {
+            } else if ('color' === 'radius') {
               el.style.borderRadius = propValue + 'px';
-            } else if ('hide' === 'border-size') {
+            } else if ('color' === 'border-size') {
               el.style.borderWidth = propValue + 'px';
-            } else if ('hide' === 'border-color') {
+            } else if ('color' === 'border-color') {
               el.style.borderColor = propValue;
-            } else if ('hide' === 'padding') {
+            } else if ('color' === 'padding') {
               el.style.padding = propValue + 'px';
-            } else if ('hide' === 'margin') {
+            } else if ('color' === 'margin') {
               el.style.margin = propValue + 'px';
-            } else if ('hide' === 'width') {
+            } else if ('color' === 'width') {
               el.style.width = propValue + 'px';
-            } else if ('hide' === 'height') {
+            } else if ('color' === 'height') {
               el.style.height = propValue + 'px';
             } else {
-              el.setAttribute('data-' + 'hide', propValue);
+              el.setAttribute('data-' + 'color', propValue);
             }
           } else {
             console.warn('Element super not found in psl_elements');
           }
-         }
+         } else { 
+              const pageEl = document.querySelector('[data-page="accueil"]');
+              if (pageEl) {
+                pageEl.classList.remove('active');
+                pageEl.style.display = 'none';
+              }
+             }
  });
         })();
       </script></div>
@@ -158,6 +166,68 @@ window.showPage = function(name) {
       const p = document.querySelector('[data-page="' + name + '"]');
       if (p) p.classList.add('active');
     };
+        // Prevent pinch zoom
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gesturechange', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gestureend', function(e) {
+            e.preventDefault();
+        });
+        // Prevent double-tap zoom
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(e) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+        // Prevent image dragging
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('img').forEach(function(img) {
+                img.setAttribute('draggable', 'false');
+                img.addEventListener('dragstart', function(e) {
+                    e.preventDefault();
+                    return false;
+                });
+                img.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                });
+            });
+        });
+        // Prevent dragging for dynamically added images
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.tagName === 'IMG') {
+                        node.setAttribute('draggable', 'false');
+                        node.addEventListener('dragstart', function(e) {
+                            e.preventDefault();
+                            return false;
+                        });
+                        node.addEventListener('mousedown', function(e) {
+                            e.preventDefault();
+                        });
+                    }
+                    if (node.querySelectorAll) {
+                        node.querySelectorAll('img').forEach(function(img) {
+                            img.setAttribute('draggable', 'false');
+                            img.addEventListener('dragstart', function(e) {
+                                e.preventDefault();
+                                return false;
+                            });
+                            img.addEventListener('mousedown', function(e) {
+                                e.preventDefault();
+                            });
+                        });
+                    }
+                });
+            });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
         if ('serviceWorker' in navigator && location.protocol === 'https:') {
             navigator.serviceWorker.register(
                 'data:application/javascript;base64,c2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiBlLndhaXRVbnRpbChzZWxmLnNraXBXYWl0aW5nKCkpKTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdhY3RpdmF0ZScsIGUgPT4gZS53YWl0VW50aWwoc2VsZi5jbGllbnRzLmNsYWltKCkpKTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGUgPT4gZS5yZXNwb25kV2l0aChmZXRjaChlLnJlcXVlc3QpLmNhdGNoKCgpID0+IG5ldyBSZXNwb25zZSgnT2ZmbGluZScpKSkpOw==',
