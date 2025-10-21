@@ -8,6 +8,8 @@
     <script>
         window.psl_vars = {};
         window.psl_elements = {};
+        window.psl_watchers = [];
+        window.psl_intervals = [];
     </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -25,6 +27,17 @@
       img { height: 50px; user-select: none; -webkit-user-drag: none; -webkit-user-select: none; pointer-events: auto; }
       * { user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }
       input, textarea { user-select: text; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; }
+      
+      /* Animations */
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+      @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+      @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+      @keyframes slideLeft { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+      @keyframes slideRight { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+      @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+      @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+      @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     
     </style>
 </head>
@@ -38,28 +51,53 @@
           window.psl_elements.super = el;
           
           
+          
+          
         })();
       </script>
-<div style="display: flex; justify-content: center; align-items: center"><input id="el_2" placeholder="Entrer votre ID"></input></div><script>
+
+      <div id="for_loop_2" class="psl-for-loop"></div>
+      <script>
         (function() {
-          const el = document.getElementById('el_2');
+          const container = document.getElementById('for_loop_2');
+          const collection = ["coucou", "salut"];
+          const templates = [{&quot;type&quot;:&quot;Element&quot;,&quot;name&quot;:&quot;box&quot;,&quot;props&quot;:{&quot;text&quot;:{&quot;type&quot;:&quot;variable&quot;,&quot;value&quot;:&quot;i&quot;}},&quot;children&quot;:[],&quot;handlers&quot;:[]}];
+          
+          if (Array.isArray(collection)) {
+            collection.forEach(function(i) {
+              templates.forEach(function(template) {
+                const el = JSON.parse(template.replace(/&quot;/g, '"'));
+                const html = window.psl_renderElement(el, 'accueil', '20px', i);
+                container.insertAdjacentHTML('beforeend', html);
+              });
+            });
+          }
+        })();
+      </script>
+    
+<div style="display: flex; justify-content: center; align-items: center"><input id="el_3" placeholder="Entrer votre ID"></input></div><script>
+        (function() {
+          const el = document.getElementById('el_3');
           if (!el) return;
           window.psl_elements.in = el;
           
           
+          
+          
         })();
       </script>
-<button id="el_3" style="width: 50%; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%)">Cliquer</button><script>
+<button id="el_4" style="width: 50%; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%)">Cliquer</button><script>
         (function() {
-          const el = document.getElementById('el_3');
+          const el = document.getElementById('el_4');
           if (!el) return;
           window.psl_elements.button = el;
+          
+          
           
           el.addEventListener('click', async function() { if (((window.psl_elements.in ? window.psl_elements.in.value : '') === "coucou")) { await new Promise(resolve => setTimeout(resolve, 2000)); 
           if (window.psl_elements && window.psl_elements['super']) {
             const el = window.psl_elements['super'];
             const propValue = "Connecté";
-            console.log('Modifying super.text to', propValue);
             if ('text' === 'text') {
               el.textContent = propValue;
             } else if ('text' === 'value') {
@@ -93,14 +131,12 @@
             } else {
               el.setAttribute('data-' + 'text', propValue);
             }
-          } else {
-            console.warn('Element super not found in psl_elements');
+            window.psl_triggerWatchers('super');
           }
         
           if (window.psl_elements && window.psl_elements['super']) {
             const el = window.psl_elements['super'];
             const propValue = "green";
-            console.log('Modifying super.color to', propValue);
             if ('color' === 'text') {
               el.textContent = propValue;
             } else if ('color' === 'value') {
@@ -134,8 +170,7 @@
             } else {
               el.setAttribute('data-' + 'color', propValue);
             }
-          } else {
-            console.warn('Element super not found in psl_elements');
+            window.psl_triggerWatchers('super');
           }
          } else { 
               const pageEl = document.querySelector('[data-page="accueil"]');
@@ -149,8 +184,24 @@
       </script></div>
     </div>
     <script>
-        // Global variables initialization already done in head
+        // Global variables and reactive system
 window.psl_vars.coucou = "salut";
+
+window.psl_triggerWatchers = function(varName) {
+  window.psl_watchers.forEach(function(watcher) {
+    if (watcher.variable === varName) {
+      watcher.callback();
+    }
+  });
+  
+  // Update template strings
+  document.querySelectorAll('.psl-var').forEach(function(el) {
+    const varName = el.getAttribute('data-var');
+    if (window.psl_vars[varName] !== undefined) {
+      el.textContent = window.psl_vars[varName];
+    }
+  });
+};
 
 document.addEventListener('keydown', function(e) {
   const currentKey = e.key.toLowerCase();
@@ -161,11 +212,25 @@ document.addEventListener('keydown', function(e) {
 
   }
 });
+
+window.psl_renderElement = function(el, pageName, pagePadding, loopVar) {
+  // This is a placeholder - in a real implementation, this would recreate the element
+  return '<div>Loop item</div>';
+};
 window.showPage = function(name) {
       document.querySelectorAll('[data-page]').forEach(p => p.classList.remove('active'));
       const p = document.querySelector('[data-page="' + name + '"]');
       if (p) p.classList.add('active');
     };
+setTimeout(function() {
+  document.querySelectorAll('.psl-var').forEach(function(el) {
+    const varName = el.getAttribute('data-var');
+    if (window.psl_vars[varName] !== undefined) {
+      el.textContent = window.psl_vars[varName];
+    }
+  });
+}, 0);
+
         // Prevent pinch zoom
         document.addEventListener('gesturestart', function(e) {
             e.preventDefault();
@@ -228,9 +293,94 @@ window.showPage = function(name) {
             });
         });
         observer.observe(document.body, { childList: true, subtree: true });
+        
+        // Swipe detection
+        window.setupSwipeDetection = function() {
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchEndX = 0;
+            let touchEndY = 0;
+            const minSwipeDistance = 50;
+            
+            document.addEventListener('touchstart', function(e) {
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            }, false);
+            
+            document.addEventListener('touchend', function(e) {
+                touchEndX = e.changedTouches[0].screenX;
+                touchEndY = e.changedTouches[0].screenY;
+                handleSwipe();
+            }, false);
+            
+            function handleSwipe() {
+                const deltaX = touchEndX - touchStartX;
+                const deltaY = touchEndY - touchStartY;
+                
+                if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+                    if (deltaX > 0) {
+                        window.dispatchEvent(new CustomEvent('psl-swipe-right'));
+                    } else {
+                        window.dispatchEvent(new CustomEvent('psl-swipe-left'));
+                    }
+                } else if (Math.abs(deltaY) > minSwipeDistance) {
+                    if (deltaY > 0) {
+                        window.dispatchEvent(new CustomEvent('psl-swipe-down'));
+                    } else {
+                        window.dispatchEvent(new CustomEvent('psl-swipe-up'));
+                    }
+                }
+            }
+        };
+        window.setupSwipeDetection();
+        
+        // Notification support
+        window.notify = function(message, duration = 3000) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(message);
+            } else if ('Notification' in window && Notification.permission !== 'denied') {
+                Notification.requestPermission().then(function(permission) {
+                    if (permission === 'granted') {
+                        new Notification(message);
+                    } else {
+                        showToast(message, duration);
+                    }
+                });
+            } else {
+                showToast(message, duration);
+            }
+        };
+        
+        function showToast(message, duration) {
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:white;padding:12px 24px;border-radius:4px;z-index:10000;';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), duration);
+        }
+        
+        // LocalStorage helpers
+        window.save = function(key, value) {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+            } catch(e) {
+                console.error('LocalStorage save error:', e);
+            }
+        };
+        
+        window.load = function(key, defaultValue = null) {
+            try {
+                const item = localStorage.getItem(key);
+                return item ? JSON.parse(item) : defaultValue;
+            } catch(e) {
+                console.error('LocalStorage load error:', e);
+                return defaultValue;
+            }
+        };
+        
         if ('serviceWorker' in navigator && location.protocol === 'https:') {
             navigator.serviceWorker.register(
-                'data:application/javascript;base64,c2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiBlLndhaXRVbnRpbChzZWxmLnNraXBXYWl0aW5nKCkpKTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdhY3RpdmF0ZScsIGUgPT4gZS53YWl0VW50aWwoc2VsZi5jbGllbnRzLmNsYWltKCkpKTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGUgPT4gZS5yZXNwb25kV2l0aChmZXRjaChlLnJlcXVlc3QpLmNhdGNoKCgpID0+IG5ldyBSZXNwb25zZSgnT2ZmbGluZScpKSkpOw==',
+                'data:application/javascript;base64,CmNvbnN0IENBQ0hFX05BTUUgPSAncHNsLWNhY2hlLXYxJzsKY29uc3QgdXJsc1RvQ2FjaGUgPSBbJy8nXTsKCnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignaW5zdGFsbCcsIGUgPT4gewogIGUud2FpdFVudGlsKAogICAgY2FjaGVzLm9wZW4oQ0FDSEVfTkFNRSkudGhlbihjYWNoZSA9PiBjYWNoZS5hZGRBbGwodXJsc1RvQ2FjaGUpKQogICk7CiAgc2VsZi5za2lwV2FpdGluZygpOwp9KTsKCnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignYWN0aXZhdGUnLCBlID0+IHsKICBlLndhaXRVbnRpbCgKICAgIGNhY2hlcy5rZXlzKCkudGhlbihjYWNoZU5hbWVzID0+IHsKICAgICAgcmV0dXJuIFByb21pc2UuYWxsKAogICAgICAgIGNhY2hlTmFtZXMubWFwKGNhY2hlTmFtZSA9PiB7CiAgICAgICAgICBpZiAoY2FjaGVOYW1lICE9PSBDQUNIRV9OQU1FKSB7CiAgICAgICAgICAgIHJldHVybiBjYWNoZXMuZGVsZXRlKGNhY2hlTmFtZSk7CiAgICAgICAgICB9CiAgICAgICAgfSkKICAgICAgKTsKICAgIH0pCiAgKTsKICBzZWxmLmNsaWVudHMuY2xhaW0oKTsKfSk7CgpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2ZldGNoJywgZSA9PiB7CiAgZS5yZXNwb25kV2l0aCgKICAgIGNhY2hlcy5tYXRjaChlLnJlcXVlc3QpLnRoZW4ocmVzcG9uc2UgPT4gewogICAgICByZXR1cm4gcmVzcG9uc2UgfHwgZmV0Y2goZS5yZXF1ZXN0KS50aGVuKGZldGNoUmVzcG9uc2UgPT4gewogICAgICAgIHJldHVybiBjYWNoZXMub3BlbihDQUNIRV9OQU1FKS50aGVuKGNhY2hlID0+IHsKICAgICAgICAgIGNhY2hlLnB1dChlLnJlcXVlc3QsIGZldGNoUmVzcG9uc2UuY2xvbmUoKSk7CiAgICAgICAgICByZXR1cm4gZmV0Y2hSZXNwb25zZTsKICAgICAgICB9KTsKICAgICAgfSk7CiAgICB9KS5jYXRjaCgoKSA9PiBuZXcgUmVzcG9uc2UoJ09mZmxpbmUnKSkKICApOwp9KTs=',
                 { scope: '/' }
             ).catch(e => console.log('SW error:', e));
         }

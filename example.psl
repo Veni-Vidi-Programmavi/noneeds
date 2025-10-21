@@ -13,6 +13,9 @@ page accueil {
         var: super;
         center;
     }
+    for (i in ["coucou", "salut"]) {
+        box() {text: i;}
+    }
     input("Entrer votre ID") {
         var: in;
         center;
@@ -25,10 +28,9 @@ page accueil {
 
         onClick {
             if (in.value == "coucou") {
-                wait(2000) {
-                    super.text: "Connecté";
-                    super.color: green;
-                }
+                wait(2000);
+                super.text: "Connecté";
+                super.color: green;
             } else {
                 accueil.hide
             }

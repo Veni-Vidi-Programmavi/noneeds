@@ -242,8 +242,6 @@ class PSLParser {
         ast.statements.push(this.parseIf());
       } else if (this.peek().value === 'for') {
         ast.statements.push(this.parseFor());
-      } else if (this.peek().value === 'while') {
-        ast.statements.push(this.parseWhile());
       } else {
         this.pos++;
       }
@@ -274,35 +272,12 @@ class PSLParser {
       this.skipWhitespace();
       if (this.peek().value === '}') break;
       
-      // Support pour les pages dans les media queries
-      if (this.peek().value === 'page') {
-        this.expect('IDENTIFIER', 'page');
-        const pageName = this.expect('IDENTIFIER').value;
-        this.expect('SYMBOL', '{');
-        
-        const pageRules = {};
-        while (this.peek().value !== '}' && !this.isAtEnd()) {
-          this.skipWhitespace();
-          if (this.peek().value === '}') break;
-          
-          const selector = this.expect('IDENTIFIER').value;
-          this.expect('SYMBOL', ':');
-          const value = this.parseExpression();
-          pageRules[selector] = value;
-          
-          if (this.peek().value === ';') this.pos++;
-        }
-        this.expect('SYMBOL', '}');
-        
-        rules[pageName] = pageRules;
-      } else {
-        const selector = this.expect('IDENTIFIER').value;
-        this.expect('SYMBOL', ':');
-        const value = this.parseExpression();
-        rules[selector] = value;
-        
-        if (this.peek().value === ';') this.pos++;
-      }
+      const selector = this.expect('IDENTIFIER').value;
+      this.expect('SYMBOL', ':');
+      const value = this.parseExpression();
+      rules[selector] = value;
+      
+      if (this.peek().value === ';') this.pos++;
     }
     
     return rules;
@@ -394,18 +369,6 @@ class PSLParser {
     this.expect('SYMBOL', '}');
     
     return { type: 'for', varName, collection, body };
-  }
-
-  parseWhile() {
-    this.expect('IDENTIFIER', 'while');
-    this.expect('SYMBOL', '(');
-    const condition = this.parseExpression();
-    this.expect('SYMBOL', ')');
-    this.expect('SYMBOL', '{');
-    const body = this.parseBlock();
-    this.expect('SYMBOL', '}');
-    
-    return { type: 'while', condition, body };
   }
 
   parseFunction() {
@@ -521,7 +484,7 @@ class PSLParser {
     let props = {};
     let directText = null;
     
-    if (this.peek().type === 'STRING' || this.peek().type === 'IDENTIFIER') {
+    if (this.peek().type === 'STRING') {
       directText = this.parseExpression();
       if (elementName === 'image') {
         props.src = directText;
@@ -695,25 +658,6 @@ class PSLParser {
           const elemName = this.expect('IDENTIFIER').value;
           this.expect('SYMBOL', '.');
           const propName = this.expect('IDENTIFIER').value;
-          
-          // Vérifier si c'est un appel de méthode sur une page (ex: page2.go())
-          if (this.peek().value === '(') {
-            this.pos++;
-            const args = [];
-            while (this.peek().value !== ')') {
-                args.push(this.parseExpression());
-                if (this.peek().value === ',') this.pos++;
-            }
-            this.expect('SYMBOL', ')');
-            actions.push({ 
-              type: 'pageMethodCall', 
-              pageName: elemName, 
-              methodName: propName, 
-              args 
-            });
-            if (this.peek().value === ';') this.pos++;
-            continue;
-          }
           
           if (this.peek().value === ':') {
             this.pos++;
@@ -1698,14 +1642,8 @@ self.addEventListener('fetch', e => {
     html += `>`;
 
     if (el.props && el.props.text && tag !== 'img') {
-      if (el.props.text.type === 'variable') {
-        // Si c'est une variable directe, créer un span avec data-var
-        html += `<span class="psl-var" data-var="${el.props.text.value}"></span>`;
-      } else {
-        // Si c'est une chaîne, utiliser l'interpolation normale
-        const textValue = this.valueToString(el.props.text);
-        html += this.interpolateTemplateString(textValue);
-      }
+      const textValue = this.valueToString(el.props.text);
+      html += this.interpolateTemplateString(textValue);
     }
 
     if (el.children && el.children.length > 0) {
@@ -1770,40 +1708,10 @@ self.addEventListener('fetch', e => {
           ` : ''}
           
           ${el.handlers.map(h => {
-            let eventName = h.event.replace('on', '').toLowerCase();
-            // Correction: mapping PSL event name to DOM event
-            const eventMap = {
-              click: 'click',
-              hover: 'mouseenter',
-              change: 'change',
-              focus: 'focus',
-              blur: 'blur',
-              submit: 'submit',
-              dragstart: 'dragstart',
-              dragend: 'dragend',
-              drop: 'drop',
-              dragover: 'dragover',
-              dragleave: 'dragleave',
-              key: 'keydown',
-              // Ajoute onMouseEnter optionnellement si tu veux
-              // Ajoute onMouseLeave optionnellement si tu veux
-              swipeleft: 'swipeleft',
-              swiperight: 'swiperight',
-              swipeup: 'swipeup',
-              swipedown: 'swipedown'
-            };
-            if (eventMap[eventName]) {
-              eventName = eventMap[eventName];
-            }
-            const actions = h.actions.map(a => {
-              if (a.type === 'while' || a.type === 'for' || a.type === 'if') {
-                return this.statementToJS(a);
-              }
-              return this.actionToJS(a, id);
-            }).join('');
+            const eventName = h.event.replace('on', '').toLowerCase();
+            const actions = h.actions.map(a => this.actionToJS(a, id)).join('');
             const isAsync = actions.includes('await');
             
-            // Drop reste spécial
             if (eventName === 'drop') {
               return `
               el.addEventListener('dragover', function(e) {
@@ -1815,14 +1723,11 @@ self.addEventListener('fetch', e => {
                 ${actions}
               });`;
             }
-            // Pour mouseenter (onHover), possibilité d'ajouter mouseleave si onHoverLeave est dans l'AST (mais ici only mouseenter)
-            if (eventName === 'mouseenter') {
-              return `el.addEventListener('mouseenter', ${isAsync ? 'async' : ''} function(e) { ${actions} });`;
-            }
+            
             if (isAsync) {
-              return `el.addEventListener('${eventName}', async function(e) { ${actions} });`;
+              return `el.addEventListener('${eventName}', async function() { ${actions} });`;
             } else {
-              return `el.addEventListener('${eventName}', function(e) { ${actions} });`;
+              return `el.addEventListener('${eventName}', function() { ${actions} });`;
             }
           }).join('\n')}
         })();
@@ -1849,57 +1754,13 @@ self.addEventListener('fetch', e => {
     }).join('');
     
     // Escape the HTML for safe embedding in JS
-    const escapedHTML = templateHTML
+const escapedHTML = templateHTML
       .replace(/\\/g, '\\\\')
       .replace(/`/g, '\\`')
       .replace(/\$/g, '\\$');
-
-    return `
-      <div id="${containerId}" class="psl-for-loop"></div>
-      <script>
-        (function() {
-          const container = document.getElementById('${containerId}');
-          const collection = ${collectionJS};
-          const templateHTML = \`${escapedHTML}\`;
-          
-          if (Array.isArray(collection)) {
-            collection.forEach(function(loopItem) {
-              let html = templateHTML.replace(/__LOOP_VAR__/g, loopItem);
-              container.insertAdjacentHTML('beforeend', html);
-            });
-          } else if (typeof collection === 'object') {
-            Object.values(collection).forEach(function(loopItem) {
-              let html = templateHTML.replace(/__LOOP_VAR__/g, loopItem);
-              container.insertAdjacentHTML('beforeend', html);
-            });
-          }
-        })();
-      </script>
-    `;
-  }
-
-  replaceLoopVariable(el, varName, placeholder) {
-    const newEl = JSON.parse(JSON.stringify(el));
-    
-    if (newEl.props) {
-      for (const [key, value] of Object.entries(newEl.props)) {
-        if (value && value.type === 'variable' && value.value === varName) {
-          newEl.props[key] = { type: 'string', value: placeholder };
-        } else if (value && value.type === 'string' && String(value.value).includes(`{${varName}}`)) {
-          newEl.props[key] = { type: 'string', value: String(value.value).replace(`{${varName}}`, placeholder) };
-        }
-      }
-    }
-    
-    if (Array.isArray(newEl.children) && newEl.children.length > 0) {
-      newEl.children = newEl.children.map(child => this.replaceLoopVariable(child, varName, placeholder));
-    }
-    
-    return newEl;
-  }
-
+  
   interpolateTemplateString(text) {
-    return String(text).replace(/\{([^}]+)\}/g, (match, varName) => {
+    return text.replace(/\{([^}]+)\}/g, (match, varName) => {
       return `<span class="psl-var" data-var="${varName.trim()}"></span>`;
     });
   }
@@ -2015,22 +1876,6 @@ self.addEventListener('fetch', e => {
         
         return js + '\n';
     }
-    else if (action.type === 'while') {
-        const cond = this.valueToJSString(action.condition);
-        const body = action.body.map(s => this.actionToJS(s, elementId)).join('');
-        return `while (${cond}) { ${body} }\n`;
-    }
-    else if (action.type === 'pageMethodCall') {
-        const pageName = action.pageName;
-        const methodName = action.methodName;
-        const args = action.args.map(a => this.valueToJSString(a)).join(', ');
-        
-        if (methodName === 'go') {
-            return `window.psl_pages.${pageName}.go();\n`;
-        }
-        
-        return `window.psl_pages.${pageName}.${methodName}(${args});\n`;
-    }
     else if (action.type === 'wait') {
         const duration = this.valueToJSString(action.duration);
         const body = action.body.map(s => this.actionToJS(s, elementId)).join('');
@@ -2082,22 +1927,13 @@ window.psl_watchers.push({
     }
 
     // Setup intervals
-    if (this.ast.intervals.length > 0) {
+    for (const interval of this.ast.intervals) {
+      const duration = this.valueToJSString(interval.duration);
+      const actions = interval.actions.map(a => this.actionToJS(a, 'global')).join('');
       js += `
-// Setup intervals after page load
-document.addEventListener('DOMContentLoaded', function() {
-`;
-      for (const interval of this.ast.intervals) {
-        const duration = this.valueToJSString(interval.duration);
-        const actions = interval.actions.map(a => this.actionToJS(a, 'global')).join('');
-        js += `
-  window.psl_intervals.push(setInterval(function() {
-    ${actions}
-  }, ${duration}));
-`;
-      }
-      js += `
-});
+window.psl_intervals.push(setInterval(function() {
+  ${actions}
+}, ${duration}));
 `;
     }
 
@@ -2142,27 +1978,11 @@ window.psl_renderElement = function(el, pageName, pagePadding, loopVar) {
 };
 `;
 
-    js += `window.go = function(name) {
+    js += `window.showPage = function(name) {
       document.querySelectorAll('[data-page]').forEach(p => p.classList.remove('active'));
       const p = document.querySelector('[data-page="' + name + '"]');
       if (p) p.classList.add('active');
-    };
-    
-    // Alias pour compatibilité
-    window.showPage = window.go;
-    
-    // Créer des objets de pages avec la méthode .go()
-    window.psl_pages = {};`;
-    
-    // Créer les objets de pages avec la méthode .go()
-    for (const pageName of Object.keys(this.ast.pages)) {
-      js += `
-window.psl_pages.${pageName} = {
-  go: function() {
-    window.go('${pageName}');
-  }
-};`;
-    }
+    };`;
     
     // Initialize template strings
     js += `
@@ -2215,11 +2035,6 @@ setTimeout(function() {
       const coll = this.valueToJSString(stmt.collection);
       const body = stmt.body.map(s => this.statementToJS(s)).join('');
       return `for (let ${varName} of ${coll}) { ${body} }\n`;
-    }
-    if (stmt.type === 'while') {
-      const cond = this.valueToJSString(stmt.condition);
-      const body = stmt.body.map(s => this.statementToJS(s)).join('');
-      return `while (${cond}) { ${body} }\n`;
     }
     return '';
   }
@@ -2307,8 +2122,470 @@ setTimeout(function() {
       input: 'input',
       image: 'img',
       container: 'div',
-      box: 'div',
-      form: 'form'
+      box: 'div'
+    };
+    return tagMap[name] || 'div';
+  }
+}
+
+// CLI
+function main() {
+  const args = process.argv.slice(2);
+  if (args.length === 0) {
+    console.log('Usage: node compiler.js <input.psl> [--output <output.html>]');
+    process.exit(1);
+  }
+
+  const inputFile = args[0];
+  let outputFile = 'output.html';
+
+  for (let i = 1; i < args.length; i++) {
+    if (args[i] === '--output' && args[i + 1]) {
+      outputFile = args[i + 1];
+    }
+  }
+
+  try {
+    console.log(`📖 Lecture du fichier: ${inputFile}`);
+    const source = fs.readFileSync(inputFile, 'utf-8');
+    
+    console.log('🔄 Tokenization...');
+    const tokenizer = new PSLTokenizer(source);
+    const tokens = tokenizer.tokenize();
+    console.log(`✓ ${tokens.length} tokens générés`);
+    
+    console.log('📝 Parsing...');
+    const parser = new PSLParser(tokens);
+    const ast = parser.parse(); 
+
+    console.log(`✓ AST généré`);
+    
+    console.log('⚙️  Compilation...');
+    const compiler = new PSLCompiler(ast);
+    const html = compiler.compile();
+    console.log(`✓ HTML généré`);
+    
+    fs.writeFileSync(outputFile, html);
+    console.log(`✅ Compilation réussie: ${outputFile}`);
+  } catch (err) {
+    console.error(`❌ Erreur: ${err.message}`);
+    console.error(err.stack);
+    process.exit(1);
+  }
+}
+
+main(););
+    
+    return `
+      <div id="${containerId}" class="psl-for-loop"></div>
+      <script>
+        (function() {
+          const container = document.getElementById('${containerId}');
+          const collection = ${collectionJS};
+          const templateHTML = \`${escapedHTML}\`;
+          
+          if (Array.isArray(collection)) {
+            collection.forEach(function(loopItem) {
+              let html = templateHTML.replace(/__LOOP_VAR__/g, loopItem);
+              container.insertAdjacentHTML('beforeend', html);
+            });
+          } else if (typeof collection === 'object') {
+            Object.values(collection).forEach(function(loopItem) {
+              let html = templateHTML.replace(/__LOOP_VAR__/g, loopItem);
+              container.insertAdjacentHTML('beforeend', html);
+            });
+          }
+        })();
+      </script>
+    `;
+  }
+  
+  replaceLoopVariable(el, varName, placeholder) {
+    const newEl = JSON.parse(JSON.stringify(el)); // Deep clone
+    
+    // Replace in props
+    if (newEl.props) {
+      for (const [key, value] of Object.entries(newEl.props)) {
+        if (value.type === 'variable' && value.value === varName) {
+          newEl.props[key] = { type: 'string', value: placeholder };
+        } else if (value.type === 'string' && value.value.includes(`{${varName}}`)) {
+          newEl.props[key] = { type: 'string', value: value.value.replace(`{${varName}}`, placeholder) };
+        }
+      }
+    }
+    
+    // Replace in children
+    if (newEl.children) {
+      newEl.children = newEl.children.map(child => this.replaceLoopVariable(child, varName, placeholder));
+    }
+    
+    return newEl;
+  }
+  
+  interpolateTemplateString(text) {
+    return text.replace(/\{([^}]+)\}/g, (match, varName) => {
+      return `<span class="psl-var" data-var="${varName.trim()}"></span>`;
+    });
+  }
+
+  actionToJS(action, elementId) {
+    if (action.type === 'assignment') {
+      const key = action.key;
+      const value = this.valueToJSString(action.value);
+      
+      if (key.includes('.')) {
+        const [elemName, prop] = key.split('.');
+        
+        const isPage = this.ast.pages && this.ast.pages[elemName];
+        
+        if (isPage) {
+          if (prop === 'hide') {
+            return `
+              const pageEl = document.querySelector('[data-page="${elemName}"]');
+              if (pageEl) {
+                pageEl.classList.remove('active');
+                pageEl.style.display = 'none';
+              }
+            `;
+          } else if (prop === 'show') {
+            return `
+              document.querySelectorAll('[data-page]').forEach(p => p.classList.remove('active'));
+              const pageEl = document.querySelector('[data-page="${elemName}"]');
+              if (pageEl) {
+                pageEl.classList.add('active');
+                pageEl.style.display = 'block';
+              }
+            `;
+          }
+        }
+        
+        return `
+          if (window.psl_elements && window.psl_elements['${elemName}']) {
+            const el = window.psl_elements['${elemName}'];
+            const propValue = ${value};
+            if ('${prop}' === 'text') {
+              el.textContent = propValue;
+            } else if ('${prop}' === 'value') {
+              el.value = propValue;
+            } else if ('${prop}' === 'src') {
+              el.src = propValue;
+            } else if ('${prop}' === 'bg') {
+              el.style.backgroundColor = propValue;
+            } else if ('${prop}' === 'color') {
+              el.style.color = propValue;
+            } else if ('${prop}' === 'size') {
+              el.style.fontSize = propValue + 'px';
+            } else if ('${prop}' === 'hide') {
+              el.style.display = (propValue === true || propValue === 1 || propValue === '1') ? 'none' : 'block';
+            } else if ('${prop}' === 'show') {
+              el.style.display = (propValue === false || propValue === 0 || propValue === '0') ? 'none' : 'block';
+            } else if ('${prop}' === 'radius') {
+              el.style.borderRadius = propValue + 'px';
+            } else if ('${prop}' === 'border-size') {
+              el.style.borderWidth = propValue + 'px';
+            } else if ('${prop}' === 'border-color') {
+              el.style.borderColor = propValue;
+            } else if ('${prop}' === 'padding') {
+              el.style.padding = propValue + 'px';
+            } else if ('${prop}' === 'margin') {
+              el.style.margin = propValue + 'px';
+            } else if ('${prop}' === 'width') {
+              el.style.width = propValue + 'px';
+            } else if ('${prop}' === 'height') {
+              el.style.height = propValue + 'px';
+            } else {
+              el.setAttribute('data-' + '${prop}', propValue);
+            }
+            window.psl_triggerWatchers('${elemName}');
+          }
+        `;
+      } else {
+        return `
+          window.psl_vars.${key} = ${value};
+          window.psl_triggerWatchers('${key}');
+        `;
+      }
+    } 
+    else if (action.type === 'functionCall') {
+        const args = action.args.map(a => this.valueToJSString(a)).join(', ');
+        
+        if (action.name === 'log') {
+          return `console.log(${args});\n`;
+        }
+        if (action.name === 'alert') {
+          return `alert(${args});\n`;
+        }
+        if (action.name === 'notify') {
+          return `notify(${args});\n`;
+        }
+        if (action.name === 'save') {
+          return `save(${args});\n`;
+        }
+        if (action.name === 'load') {
+          return `load(${args});\n`;
+        }
+        
+        return `window.${action.name}(${args});\n`;
+    }
+    else if (action.type === 'if') {
+        const cond = this.valueToJSString(action.condition); 
+        const ifBody = action.body.map(s => this.actionToJS(s, elementId)).join('');
+        let js = `if (${cond}) { ${ifBody} }`;
+
+        if (action.elseBody && action.elseBody.length > 0) {
+            const elseBody = action.elseBody.map(s => this.actionToJS(s, elementId)).join('');
+            js += ` else { ${elseBody} }`;
+        }
+        
+        return js + '\n';
+    }
+    else if (action.type === 'wait') {
+        const duration = this.valueToJSString(action.duration);
+        const body = action.body.map(s => this.actionToJS(s, elementId)).join('');
+        return `await new Promise(resolve => setTimeout(resolve, ${duration})); ${body}`;
+    }
+
+    return '';
+  }
+
+  generateJavaScript() {
+    let js = `// Global variables and reactive system\n`;
+    
+    // Initialize variables
+    for (const [name, value] of Object.entries(this.ast.globalVariables)) {
+      js += `window.psl_vars.${name} = ${this.valueToJSString(value)};\n`;
+    }
+    
+    // Watchers system
+    js += `
+window.psl_triggerWatchers = function(varName) {
+  window.psl_watchers.forEach(function(watcher) {
+    if (watcher.variable === varName) {
+      watcher.callback();
+    }
+  });
+  
+  // Update template strings
+  document.querySelectorAll('.psl-var').forEach(function(el) {
+    const varName = el.getAttribute('data-var');
+    if (window.psl_vars[varName] !== undefined) {
+      el.textContent = window.psl_vars[varName];
+    }
+  });
+};
+`;
+
+    // Setup watchers
+    for (const watcher of this.ast.watchers) {
+      const varName = this.valueToString(watcher.variable);
+      const actions = watcher.actions.map(a => this.actionToJS(a, 'global')).join('');
+      js += `
+window.psl_watchers.push({
+  variable: '${varName}',
+  callback: function() {
+    ${actions}
+  }
+});
+`;
+    }
+
+    // Setup intervals
+    for (const interval of this.ast.intervals) {
+      const duration = this.valueToJSString(interval.duration);
+      const actions = interval.actions.map(a => this.actionToJS(a, 'global')).join('');
+      js += `
+window.psl_intervals.push(setInterval(function() {
+  ${actions}
+}, ${duration}));
+`;
+    }
+
+    // Functions
+    for (const [funcName, func] of Object.entries(this.ast.functions)) {
+      const params = func.params.join(', ');
+      const body = func.body.map(stmt => this.statementToJS(stmt)).join('');
+      js += `window.${funcName} = function(${params}) { ${body} };\n`;
+    }
+
+    // Global statements
+    if (this.ast.statements && this.ast.statements.length > 0) {
+      for (const stmt of this.ast.statements) {
+        js += this.statementToJS(stmt);
+      }
+    }
+    
+    // Key handlers
+    if (this.ast.keyHandlers && this.ast.keyHandlers.length > 0) {
+        js += `
+document.addEventListener('keydown', function(e) {
+  const currentKey = e.key.toLowerCase();
+`;
+        for (const handler of this.ast.keyHandlers) {
+            const keyJS = this.valueToJSString(handler.key);
+            const actions = handler.actions.map(a => this.actionToJS(a, 'global')).join('');
+            js += `
+  if (currentKey === ${keyJS}.toLowerCase()) {
+    e.preventDefault(); 
+    ${actions}
+  }
+`;
+        }
+        js += `});\n`;
+    }
+    
+    // Helper for rendering elements in for loops
+    js += `
+window.psl_renderElement = function(el, pageName, pagePadding, loopVar) {
+  // This is a placeholder - in a real implementation, this would recreate the element
+  return '<div>Loop item</div>';
+};
+`;
+
+    js += `window.showPage = function(name) {
+      document.querySelectorAll('[data-page]').forEach(p => p.classList.remove('active'));
+      const p = document.querySelector('[data-page="' + name + '"]');
+      if (p) p.classList.add('active');
+    };`;
+    
+    // Initialize template strings
+    js += `
+setTimeout(function() {
+  document.querySelectorAll('.psl-var').forEach(function(el) {
+    const varName = el.getAttribute('data-var');
+    if (window.psl_vars[varName] !== undefined) {
+      el.textContent = window.psl_vars[varName];
+    }
+  });
+}, 0);
+`;
+
+    return js;
+  }
+
+  statementToJS(stmt) {
+    if (stmt.type === 'assignment') {
+      if (stmt.varName.includes('.')) {
+          return `// Element property assignment in statement context ignored\n`;
+      }
+      return `window.psl_vars.${stmt.varName} = ${this.valueToJSString(stmt.value)};\n`;
+    }
+    if (stmt.type === 'functionCall') {
+      const args = stmt.args.map(a => this.valueToJSString(a)).join(', ');
+      
+      if (stmt.name === 'log') {
+        return `console.log(${args});\n`;
+      }
+      if (stmt.name === 'alert') {
+        return `alert(${args});\n`;
+      }
+      
+      return `window.${stmt.name}(${args});\n`;
+    }
+    if (stmt.type === 'if') {
+      const cond = this.valueToJSString(stmt.condition); 
+      const body = stmt.body.map(s => this.statementToJS(s)).join('');
+      let js = `if (${cond}) { ${body} }`;
+
+      if (stmt.elseBody && stmt.elseBody.length > 0) {
+          const elseBody = stmt.elseBody.map(s => this.statementToJS(s)).join('');
+          js += ` else { ${elseBody} }`;
+      }
+      
+      return js + '\n';
+    }
+    if (stmt.type === 'for') {
+      const varName = stmt.varName;
+      const coll = this.valueToJSString(stmt.collection);
+      const body = stmt.body.map(s => this.statementToJS(s)).join('');
+      return `for (let ${varName} of ${coll}) { ${body} }\n`;
+    }
+    return '';
+  }
+
+  valueToString(value) {
+    if (!value) return '';
+    if (value.type === 'string') return value.value;
+    if (value.type === 'number') return String(value.value);
+    if (value.type === 'boolean') return value.value ? 'true' : 'false';
+    if (value.type === 'variable') return String(value.value);
+    if (value.type === 'array') {
+      return '[' + value.elements.map(e => this.valueToString(e)).join(', ') + ']';
+    }
+    if (value.type === 'object') {
+      const pairs = Object.entries(value.properties).map(([k, v]) => `${k}: ${this.valueToString(v)}`);
+      return '{' + pairs.join(', ') + '}';
+    }
+    return '';
+  }
+
+  valueToJSString(value) {
+    if (!value) return 'null';
+    if (value.type === 'string') return `"${value.value.replace(/"/g, '\\"')}"`;
+    if (value.type === 'number') return value.value;
+    if (value.type === 'boolean') return value.value ? 'true' : 'false';
+    if (value.type === 'variable') return `window.psl_vars.${value.value}`;
+    if (value.type === 'array') {
+      const elements = value.elements.map(e => this.valueToJSString(e)).join(', ');
+      return `[${elements}]`;
+    }
+    if (value.type === 'object') {
+      const pairs = Object.entries(value.properties).map(([k, v]) => `${k}: ${this.valueToJSString(v)}`);
+      return `{${pairs.join(', ')}}`;
+    }
+    if (value.type === 'dotNotation') {
+      const prop = value.property;
+      if (prop === 'text') {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.textContent : '')`;
+      } else if (prop === 'value') {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.value : '')`;
+      } else if (prop === 'src') {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.src : '')`;
+      } else if (prop === 'bg') {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.style.backgroundColor : '')`;
+      } else if (prop === 'color') {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.style.color : '')`;
+      } else if (prop === 'size') {
+        return `(window.psl_elements.${value.object} ? parseInt(window.psl_elements.${value.object}.style.fontSize) : 0)`;
+      } else if (prop === 'width') {
+        return `(window.psl_elements.${value.object} ? parseInt(window.psl_elements.${value.object}.style.width) : 0)`;
+      } else if (prop === 'height') {
+        return `(window.psl_elements.${value.object} ? parseInt(window.psl_elements.${value.object}.style.height) : 0)`;
+      } else {
+        return `(window.psl_elements.${value.object} ? window.psl_elements.${value.object}.getAttribute('data-${prop}') : '')`;
+      }
+    }
+    if (value.type === 'binaryExpression') {
+      const leftJS = this.valueToJSString(value.left);
+      const rightJS = this.valueToJSString(value.right);
+      const op = value.operator === '==' ? '===' : value.operator;
+      return `(${leftJS} ${op} ${rightJS})`;
+    }
+    if (value.type === 'ternary') {
+      const condJS = this.valueToJSString(value.condition);
+      const trueJS = this.valueToJSString(value.trueExpr);
+      const falseJS = this.valueToJSString(value.falseExpr);
+      return `(${condJS} ? ${trueJS} : ${falseJS})`;
+    }
+
+    return 'null';
+  }
+
+  getMetadata(key) {
+    const val = this.ast.metadata[key];
+    if (val && val.type === 'string') return val.value;
+    if (val && val.type === 'variable') return val.value;
+    return null;
+  }
+
+  getElementTag(name) {
+    const tagMap = {
+      title: 'h1',
+      text: 'p',
+      button: 'button',
+      input: 'input',
+      image: 'img',
+      container: 'div',
+      box: 'div'
     };
     return tagMap[name] || 'div';
   }
@@ -2361,6 +2638,16 @@ function main() {
 }
 
 main();
+
+/* Appended safe completion */
+
+
+  // Fallback for any other value types
+  return 'null';
+}
+
+// If any methods were left open, ensure class closure
+}
 
 // Export classes for Node usage
 if (typeof module !== 'undefined' && module.exports) {
